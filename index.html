@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi Álbum Bip!</title>
+
+<!-- PWA Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0052cc">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Álbum Bip!">
+<link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',sans-serif}
+body{background:#cbd5e1;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:20px}
+.celular-frame{width:340px;min-height:640px;background:#f8fafc;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,0.2);border:7px solid #0f172a;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.header{background:#0052cc;color:white;padding:10px 12px;text-align:center;font-weight:bold;font-size:15px}
+.progreso-container{background:#0052cc;padding:0 12px 10px}
+.progreso-card{background:white;padding:8px 10px;border-radius:8px}
+.progreso-texto{display:flex;justify-content:space-between;font-size:11px;font-weight:bold;margin-bottom:4px;color:#1e293b}
+.barra-gris{background:#e2e8f0;width:100%;height:5px;border-radius:3px;overflow:hidden}
+.barra-verde{background:#22c55e;height:100%;width:0%;transition:width 0.3s}
+.tabs{display:flex;background:white;border-bottom:2px solid #e2e8f0}
+.tab{flex:1;padding:8px 4px;text-align:center;font-size:11px;font-weight:bold;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s}
+.tab.activo{color:#0052cc;border-bottom-color:#0052cc}
+.toolbar{padding:8px 10px;background:white;border-bottom:1px solid #e2e8f0;display:flex;flex-direction:column;gap:6px}
+.search-box{display:flex;align-items:center;gap:6px;background:#f1f5f9;border-radius:8px;padding:6px 10px}
+.search-box input{flex:1;border:none;background:transparent;outline:none;font-size:12px;color:#1e293b}
+.filter-row{display:flex;gap:6px;align-items:center}
+.filter-row label{font-size:10px;font-weight:bold;color:#64748b;white-space:nowrap}
+.select-filtro{flex:1;padding:4px;border-radius:6px;border:1px solid #cbd5e1;font-size:10px;outline:none}
+.contenido-scroll{flex:1;overflow-y:auto;padding:10px}
+.cuadricula{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.tarjeta-bip{aspect-ratio:85/54;border-radius:10px;position:relative;cursor:pointer;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.12)}
+.tarjeta-bip.bloqueada{background:#cbd5e1!important}
+.tarjeta-bip img.bip-thumb{width:100%;height:100%;object-fit:cover;display:block}
+.bip-color-bg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center}
+.bip-color-bg span{font-size:10px;font-weight:bold;color:white;line-height:1.3;text-shadow:0 1px 3px rgba(0,0,0,0.3)}
+.tarjeta-bip.bloqueada .bip-color-bg span{color:#64748b;text-shadow:none}
+.check-icono{position:absolute;top:5px;right:6px;font-size:11px;background:rgba(0,0,0,0.3);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center}
+.logo-bip{position:absolute;bottom:4px;right:7px;font-weight:bold;font-style:italic;font-size:11px;color:#ffcc00;text-shadow:0 1px 2px rgba(0,0,0,0.5)}
+.tarjeta-bip.bloqueada .logo-bip{color:#94a3b8;text-shadow:none}
+.empty-state{text-align:center;padding:2rem;color:#94a3b8;font-size:12px;grid-column:span 2}
+.empty-state div{font-size:32px;margin-bottom:8px}
+.btn-agregar{position:absolute;bottom:15px;right:15px;width:44px;height:44px;background:#ffcc00;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:24px;font-weight:bold;border:none;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,0.2);z-index:10}
+.pantalla-secundaria{position:absolute;top:0;left:0;width:100%;height:100%;background:white;z-index:20;display:flex;flex-direction:column;transform:translateY(100%);transition:transform 0.22s ease}
+.pantalla-secundaria.activa{transform:translateY(0)}
+.navbar-modal{background:#0052cc;color:white;padding:11px 12px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:bold;flex-shrink:0}
+.btn-volver{background:none;border:none;color:white;font-size:18px;cursor:pointer;line-height:1}
+.cuerpo-modal{flex:1;overflow-y:auto;padding:14px;font-size:12px}
+.seccion-titulo{font-weight:bold;color:#1e293b;margin:12px 0 5px;font-size:11px;border-bottom:1px solid #e2e8f0;padding-bottom:2px;text-transform:uppercase;letter-spacing:0.3px}
+.caja-texto{width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:6px;margin-bottom:8px;outline:none;font-size:12px;font-family:'Segoe UI',sans-serif}
+.caja-texto:focus{border-color:#0052cc}
+.flip-container{width:100%;aspect-ratio:85/54;perspective:600px;margin-bottom:6px;cursor:pointer}
+.flip-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform 0.5s}
+.flip-container.flipped .flip-inner{transform:rotateY(180deg)}
+.flip-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:8px;overflow:hidden;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#94a3b8;font-weight:bold}
+.flip-face img{width:100%;height:100%;object-fit:cover}
+.flip-back{transform:rotateY(180deg)}
+.flip-hint{font-size:10px;color:#94a3b8;text-align:center;margin-bottom:8px}
+.flip-btn{display:flex;gap:6px;margin-bottom:10px}
+.flip-btn button{flex:1;padding:5px;border:1px solid #cbd5e1;border-radius:6px;font-size:10px;font-weight:bold;cursor:pointer;background:#f8fafc;color:#1e293b}
+.flip-btn button.active{background:#0052cc;color:white;border-color:#0052cc}
+.det-img-wrap{width:100%;aspect-ratio:85/54;border-radius:8px;overflow:hidden;background:#e2e8f0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;margin-bottom:8px}
+.det-img-wrap img{width:100%;height:100%;object-fit:cover}
+.det-row{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start}
+.det-label{font-size:10px;color:#94a3b8;min-width:80px;font-weight:bold;padding-top:1px}
+.det-val{font-size:12px;color:#1e293b;flex:1;line-height:1.4}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:bold;color:white}
+.bloque-fisico{background:rgba(34,197,94,0.05);padding:10px;border-radius:8px;border:1px solid rgba(34,197,94,0.2);margin-top:4px}
+.bloque-bloqueado{background:rgba(245,158,11,0.06);padding:8px;border-radius:8px;text-align:center;color:#b45309;font-size:10px;margin-top:4px}
+.btn-accion{width:100%;padding:9px;border:none;border-radius:8px;font-weight:bold;font-size:12px;cursor:pointer;margin-top:8px;transition:opacity 0.2s}
+.btn-accion:hover{opacity:0.88}
+.btn-guardar{background:#0052cc;color:white}
+.btn-conseguida{background:#22c55e;color:white}
+.btn-perder{background:#64748b;color:white}
+.btn-eliminar{background:none;border:1px solid #ef4444;color:#ef4444}
+.btn-editar{background:#f1f5f9;color:#1e293b;border:1px solid #cbd5e1}
+.btn-outline{background:none;border:1px solid #0052cc;color:#0052cc}
+.upload-area{width:100%;padding:12px;border:2px dashed #cbd5e1;border-radius:8px;text-align:center;cursor:pointer;color:#0052cc;font-size:11px;font-weight:bold;margin-bottom:6px;background:#f8fafc}
+.crop-outer{display:none;margin-bottom:8px}
+.crop-wrap{position:relative;width:100%;aspect-ratio:85/54;overflow:hidden;border-radius:8px;border:1px solid #cbd5e1;cursor:grab;background:#111;touch-action:none}
+.crop-wrap.grabbing{cursor:grabbing}
+.crop-wrap img{position:absolute;transform-origin:0 0;will-change:transform;image-rendering:high-quality}
+.crop-hint{font-size:10px;color:#64748b;text-align:center;margin-bottom:4px}
+.crop-controls{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.crop-controls label{font-size:10px;color:#64748b;white-space:nowrap}
+.crop-controls input[type=range]{flex:1}
+.num-serie-input input{width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;outline:none;margin-top:4px}
+.num-serie-input input:focus{border-color:#0052cc}
+</style>
+</head>
+<body>
+<div class="celular-frame">
+<div class="header">Mi Álbum Bip!</div>
+<div class="progreso-container">
+<div class="progreso-card">
+<div class="progreso-texto"><span>Progreso de Colección</span><span id="txt-progreso">0 de 0 (0%)</span></div>
+<div class="barra-gris"><div class="barra-verde" id="barra-progreso"></div></div>
+</div>
+</div>
+<div class="tabs">
+<div class="tab activo" id="tab-catalogo" onclick="setTab('catalogo')">📋 Catálogo</div>
+<div class="tab" id="tab-coleccion" onclick="setTab('coleccion')">⭐ Mi Colección</div>
+</div>
+<div class="toolbar">
+<div class="search-box">
+<span>🔍</span>
+<input type="text" id="searchInput" placeholder="Buscar tarjeta..." oninput="renderizar()">
+</div>
+<div class="filter-row">
+<label>Orden:</label>
+<select class="select-filtro" id="filtro-orden" onchange="renderizar()">
+<option value="fecha_asc">Fecha (antiguo)</option>
+<option value="fecha_desc">Fecha (reciente)</option>
+<option value="nombre_asc">Nombre A-Z</option>
+<option value="nombre_desc">Nombre Z-A</option>
+</select>
+<label>Tipo:</label>
+<select class="select-filtro" id="filtro-tipo" onchange="renderizar()">
+<option value="Todos">Todos</option>
+<option value="Evento">Eventos</option>
+<option value="Personaje">Personajes</option>
+<option value="Marca">Marcas</option>
+</select>
+</div>
+</div>
+<div class="contenido-scroll"><div class="cuadricula" id="contenedor-grid"></div></div>
+<button class="btn-agregar" id="btnAgregar">+</button>
+
+<div class="pantalla-secundaria" id="modal-detalle">
+<div class="navbar-modal" id="nav-detalle-bg">
+<button class="btn-volver" onclick="cerrarModal('modal-detalle')">←</button>
+<span id="det-titulo" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Detalle</span>
+</div>
+<div class="cuerpo-modal" id="cuerpo-detalle"></div>
+</div>
+
+<div class="pantalla-secundaria" id="modal-formulario">
+<div class="navbar-modal">
+<button class="btn-volver" onclick="cerrarModal('modal-formulario')">←</button>
+<span id="form-titulo-nav">Nueva Tarjeta</span>
+</div>
+<div class="cuerpo-modal">
+<p class="seccion-titulo">Datos</p>
+<input type="text" class="caja-texto" id="form-titulo" placeholder="Nombre (Ej: Bip! McDonald's)">
+<label style="font-size:11px;font-weight:bold;color:#64748b;display:block;margin-bottom:4px">Fecha de lanzamiento:</label>
+<input type="date" class="caja-texto" id="form-fecha">
+<p class="seccion-titulo">Clasificación</p>
+<select class="caja-texto" id="form-tipo">
+<option value="Evento">Evento / Conmemoración</option>
+<option value="Personaje">Personaje</option>
+<option value="Marca">Marca</option>
+</select>
+<p class="seccion-titulo">Descripción</p>
+<textarea class="caja-texto" id="form-desc" rows="3" placeholder="Descripción de la edición..."></textarea>
+<p class="seccion-titulo">Imagen del Catálogo</p>
+<div class="upload-area" id="uploadArea">Subir foto desde tu dispositivo</div>
+<div class="crop-outer" id="cropOuter">
+<div class="crop-wrap" id="cropWrap"><img id="cropImg" src="" alt=""></div>
+<p class="crop-hint">Arrastra para reencuadrar</p>
+<div class="crop-controls"><label>Zoom</label><input type="range" id="zoomSlider" min="100" max="400" step="1" value="100"></div>
+</div>
+<button class="btn-accion btn-guardar" id="btnGuardar">Guardar en Catálogo</button>
+</div>
+</div>
+
+<div class="pantalla-secundaria" id="modal-fisica">
+<div class="navbar-modal" style="background:#166534">
+<button class="btn-volver" onclick="cerrarModal('modal-fisica')">←</button>
+<span>Mi Tarjeta Física</span>
+</div>
+<div class="cuerpo-modal">
+<p class="seccion-titulo">Número de Serie</p>
+<div class="num-serie-input"><input type="text" id="fisica-serie" placeholder="Ej: 94830192" maxlength="20"></div>
+<p class="seccion-titulo">Frente de la Tarjeta</p>
+<div class="upload-area" id="uploadFront">Subir foto del frente</div>
+<div class="crop-outer" id="cropOuterFront">
+<div class="crop-wrap" id="cropWrapFront"><img id="cropImgFront" src="" alt=""></div>
+<p class="crop-hint">Arrastra para reencuadrar</p>
+<div class="crop-controls"><label>Zoom</label><input type="range" id="zoomFront" min="100" max="400" step="1" value="100"></div>
+</div>
+<p class="seccion-titulo">Reverso de la Tarjeta</p>
+<div class="upload-area" id="uploadBack">Subir foto del reverso</div>
+<div class="crop-outer" id="cropOuterBack">
+<div class="crop-wrap" id="cropWrapBack"><img id="cropImgBack" src="" alt=""></div>
+<p class="crop-hint">Arrastra para reencuadrar</p>
+<div class="crop-controls"><label>Zoom</label><input type="range" id="zoomBack" min="100" max="400" step="1" value="100"></div>
+</div>
+<button class="btn-accion btn-guardar" id="btnGuardarFisica">Guardar Tarjeta Física</button>
+</div>
+</div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" style="display:none">
+<canvas id="cropCanvas" style="display:none"></canvas>
+
+<script>
+let DB;
+function initDB(){return new Promise((res,rej)=>{const req=indexedDB.open('BipAlbum',2);req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('tarjetas'))db.createObjectStore('tarjetas',{keyPath:'id'});if(!db.objectStoreNames.contains('fotos'))db.createObjectStore('fotos',{keyPath:'id'});};req.onsuccess=e=>{DB=e.target.result;res();};req.onerror=()=>rej();});}
+function dbPut(store,obj){return new Promise(res=>{const tx=DB.transaction(store,'readwrite');tx.objectStore(store).put(obj).onsuccess=()=>res();});}
+function dbDelete(store,id){return new Promise(res=>{const tx=DB.transaction(store,'readwrite');tx.objectStore(store).delete(id).onsuccess=()=>res();});}
+function dbGet(store,id){return new Promise(res=>{const tx=DB.transaction(store,'readonly');tx.objectStore(store).get(id).onsuccess=e=>res(e.target.result);});}
+
+let catalogo=[];let tabActual='catalogo';let selId=null,editId=null,pendingFileCb=null;
+let cropStates={};
+function colorTipo(t){return t==='Personaje'?'#a855f7':t==='Marca'?'#6366f1':'#0052cc';}
+function fmtFecha(f){if(!f)return'Sin fecha';const p=f.split('-');return p.length<3?f:`${p[2]}/${p[1]}/${p[0]}`;}
+function setTab(t){tabActual=t;document.getElementById('tab-catalogo').classList.toggle('activo',t==='catalogo');document.getElementById('tab-coleccion').classList.toggle('activo',t==='coleccion');renderizar();}
+
+async function renderizar(){
+const q=(document.getElementById('searchInput').value||'').toLowerCase();
+const orden=document.getElementById('filtro-orden').value;
+const tipo=document.getElementById('filtro-tipo').value;
+const grid=document.getElementById('contenedor-grid');grid.innerHTML='';
+const total=catalogo.length,obt=catalogo.filter(t=>t.tengo).length,pct=total>0?Math.round(obt/total*100):0;
+document.getElementById('txt-progreso').textContent=`${obt} de ${total} (${pct}%)`;
+document.getElementById('barra-progreso').style.width=pct+'%';
+let lista=[...catalogo];
+if(tabActual==='coleccion')lista=lista.filter(t=>t.tengo);
+if(tipo!=='Todos')lista=lista.filter(t=>t.tipo===tipo);
+if(q)lista=lista.filter(t=>t.titulo.toLowerCase().includes(q)||(t.descripcion||'').toLowerCase().includes(q));
+lista.sort((a,b)=>{if(orden==='fecha_asc')return new Date(a.fecha)-new Date(b.fecha);if(orden==='fecha_desc')return new Date(b.fecha)-new Date(a.fecha);if(orden==='nombre_asc')return a.titulo.localeCompare(b.titulo);return b.titulo.localeCompare(a.titulo);});
+if(!lista.length){grid.innerHTML=`<div class="empty-state"><div>${tabActual==='coleccion'?'⭐':'📋'}</div>${tabActual==='coleccion'?'Aún no tienes tarjetas marcadas como conseguidas.':'No se encontraron tarjetas.'}</div>`;return;}
+for(const t of lista){
+const el=document.createElement('div');el.className='tarjeta-bip'+(t.tengo?'':' bloqueada');el.onclick=()=>verDetalle(t.id);
+if(t.imgBase64){el.innerHTML=`<img class="bip-thumb" src="${t.imgBase64}" alt="${t.titulo}"><div class="check-icono">${t.tengo?'✔':'🔒'}</div><div class="logo-bip">bip!</div>`;}
+else{el.style.background=t.tengo?colorTipo(t.tipo):'#cbd5e1';el.innerHTML=`<div class="bip-color-bg"><span>${t.titulo}</span></div><div class="check-icono">${t.tengo?'✔':'🔒'}</div><div class="logo-bip">bip!</div>`;}
+grid.appendChild(el);
+}
+}
+
+async function verDetalle(id){
+const t=catalogo.find(x=>x.id===id);selId=id;
+const fotos=await dbGet('fotos',id)||{};
+document.getElementById('nav-detalle-bg').style.background=t.tengo?colorTipo(t.tipo):'#64748b';
+document.getElementById('det-titulo').textContent=t.titulo;
+const c=document.getElementById('cuerpo-detalle');c.innerHTML='';
+const imgDiv=document.createElement('div');imgDiv.className='det-img-wrap';
+if(t.imgBase64)imgDiv.innerHTML=`<img src="${t.imgBase64}" alt="${t.titulo}">`;else imgDiv.textContent='Sin imagen de catálogo';
+c.appendChild(imgDiv);
+const info=document.createElement('div');
+info.innerHTML=`<div class="det-row"><span class="det-label">Tipo</span><span class="det-val"><span class="badge" style="background:${colorTipo(t.tipo)}">${t.tipo}</span></span></div><div class="det-row"><span class="det-label">Lanzamiento</span><span class="det-val">${fmtFecha(t.fecha)}</span></div><div class="det-row"><span class="det-label">Descripción</span><span class="det-val">${t.descripcion||'Sin descripción.'}</span></div>`;
+c.appendChild(info);
+const tF=document.createElement('p');tF.className='seccion-titulo';tF.textContent='Mi Tarjeta Física';c.appendChild(tF);
+if(t.tengo){
+const bloque=document.createElement('div');bloque.className='bloque-fisico';
+bloque.innerHTML=`<div style="font-weight:bold;color:#166534;margin-bottom:8px;font-size:11px">Vista de mi tarjeta física</div>
+<div class="flip-container" id="flipCard"><div class="flip-inner">
+<div class="flip-face">${fotos.front?`<img src="${fotos.front}">`:'Frente — sin foto'}</div>
+<div class="flip-face flip-back">${fotos.back?`<img src="${fotos.back}">`:'Reverso — sin foto'}</div>
+</div></div>
+<p class="flip-hint">Toca la tarjeta para voltearla</p>
+<div class="flip-btn"><button class="active" id="btnLadoF" onclick="setLado('front')">Frente</button><button id="btnLadoB" onclick="setLado('back')">Reverso</button></div>
+<div class="det-row"><span class="det-label">N° Serie</span><span class="det-val">${t.numSerie||'Sin registrar'}</span></div>`;
+c.appendChild(bloque);
+document.getElementById('flipCard').onclick=()=>{const fc=document.getElementById('flipCard');fc.classList.toggle('flipped');const fl=fc.classList.contains('flipped');document.getElementById('btnLadoF').classList.toggle('active',!fl);document.getElementById('btnLadoB').classList.toggle('active',fl);};
+const bF=document.createElement('button');bF.className='btn-accion btn-outline';bF.textContent='Editar Fotos Fisicas';bF.onclick=()=>abrirFisica(t);c.appendChild(bF);
+const bQ=document.createElement('button');bQ.className='btn-accion btn-perder';bQ.textContent="Quitar de Mis Tarjetas";bQ.onclick=()=>{t.tengo=false;guardarCatalogo();cerrarModal('modal-detalle');renderizar();};c.appendChild(bQ);
+} else {
+const b=document.createElement('div');b.className='bloque-bloqueado';b.textContent='No tienes esta tarjeta. Márcala como conseguida.';c.appendChild(b);
+const bC=document.createElement('button');bC.className='btn-accion btn-conseguida';bC.textContent='Marcar como Conseguida';bC.onclick=()=>{t.tengo=true;guardarCatalogo();cerrarModal('modal-detalle');renderizar();};c.appendChild(bC);
+}
+const bE=document.createElement('button');bE.className='btn-accion btn-editar';bE.textContent='Editar Datos de Catálogo';bE.onclick=()=>activarEdicion(t);c.appendChild(bE);
+const bEl=document.createElement('button');bEl.className='btn-accion btn-eliminar';bEl.textContent='Eliminar del Catálogo';bEl.onclick=()=>{if(confirm('Eliminar esta tarjeta?')){catalogo=catalogo.filter(x=>x.id!==id);dbDelete('fotos',id);guardarCatalogo();cerrarModal('modal-detalle');renderizar();}};c.appendChild(bEl);
+document.getElementById('modal-detalle').classList.add('activa');
+}
+
+function setLado(lado){const fc=document.getElementById('flipCard');if(lado==='back')fc.classList.add('flipped');else fc.classList.remove('flipped');document.getElementById('btnLadoF').classList.toggle('active',lado==='front');document.getElementById('btnLadoB').classList.toggle('active',lado==='back');}
+function resetCrop(s){cropStates[s]={nativeW:0,nativeH:0,ox:0,oy:0,scale:1,minScale:1,originalSrc:'',dragging:false};}
+
+document.getElementById('btnAgregar').onclick=()=>{editId=null;resetCrop('');document.getElementById('form-titulo-nav').textContent='Nueva Tarjeta';document.getElementById('form-titulo').value='';document.getElementById('form-fecha').value=new Date().toISOString().split('T')[0];document.getElementById('form-desc').value='';document.getElementById('form-tipo').value='Evento';document.getElementById('uploadArea').innerHTML='Subir foto desde tu dispositivo';document.getElementById('cropOuter').style.display='none';document.getElementById('modal-formulario').classList.add('activa');};
+function activarEdicion(t){editId=t.id;resetCrop('');document.getElementById('form-titulo-nav').textContent='Editar Tarjeta';document.getElementById('form-titulo').value=t.titulo;document.getElementById('form-fecha').value=t.fecha;document.getElementById('form-tipo').value=t.tipo;document.getElementById('form-desc').value=t.descripcion||'';if(t.imgBase64){cropStates[''].originalSrc=t.imgBase64;document.getElementById('uploadArea').textContent='Imagen cargada';setTimeout(()=>initCrop(t.imgBase64,'','cropWrap','cropOuter','zoomSlider'),60);}else{document.getElementById('uploadArea').innerHTML='Subir foto desde tu dispositivo';document.getElementById('cropOuter').style.display='none';}cerrarModal('modal-detalle');document.getElementById('modal-formulario').classList.add('activa');}
+document.getElementById('uploadArea').onclick=()=>pickFile(src=>{cropStates[''].originalSrc=src;initCrop(src,'','cropWrap','cropOuter','zoomSlider');});
+document.getElementById('btnGuardar').onclick=async()=>{const titulo=document.getElementById('form-titulo').value.trim();if(!titulo){alert('Ingresa el nombre.');return;}const cs=cropStates[''];let fi=cs.originalSrc;if(cs.originalSrc&&cs.nativeW)fi=doCrop('cropWrap',cs);const ex=editId?catalogo.find(x=>x.id===editId):null;const obj={id:editId||Date.now().toString(),titulo,fecha:document.getElementById('form-fecha').value,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',imgBase64:fi};if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);guardarCatalogo();cerrarModal('modal-formulario');renderizar();};
+
+async function abrirFisica(t){resetCrop('Front');resetCrop('Back');const fotos=await dbGet('fotos',t.id)||{};document.getElementById('fisica-serie').value=t.numSerie||'';['Front','Back'].forEach(lado=>{const src=lado==='Front'?fotos.front:fotos.back;const ua=document.getElementById('upload'+lado);const co=document.getElementById('cropOuter'+lado);if(src){cropStates[lado].originalSrc=src;ua.textContent='Imagen cargada';setTimeout(()=>initCrop(src,lado,'cropWrap'+lado,'cropOuter'+lado,'zoom'+lado),80);}else{ua.innerHTML=`Subir foto del ${lado==='Front'?'frente':'reverso'}`;co.style.display='none';}});cerrarModal('modal-detalle');document.getElementById('modal-fisica').classList.add('activa');}
+document.getElementById('uploadFront').onclick=()=>pickFile(src=>{cropStates['Front'].originalSrc=src;initCrop(src,'Front','cropWrapFront','cropOuterFront','zoomFront');});
+document.getElementById('uploadBack').onclick=()=>pickFile(src=>{cropStates['Back'].originalSrc=src;initCrop(src,'Back','cropWrapBack','cropOuterBack','zoomBack');});
+document.getElementById('btnGuardarFisica').onclick=async()=>{const t=catalogo.find(x=>x.id===selId);t.numSerie=document.getElementById('fisica-serie').value;const csF=cropStates['Front'],csB=cropStates['Back'];const fotos=await dbGet('fotos',selId)||{id:selId};if(csF.originalSrc&&csF.nativeW)fotos.front=doCrop('cropWrapFront',csF);else if(csF.originalSrc)fotos.front=csF.originalSrc;if(csB.originalSrc&&csB.nativeW)fotos.back=doCrop('cropWrapBack',csB);else if(csB.originalSrc)fotos.back=csB.originalSrc;await dbPut('fotos',fotos);guardarCatalogo();cerrarModal('modal-fisica');await verDetalle(selId);};
+
+function initCrop(src,suffix,wrapId,outerId,sliderId){document.getElementById(outerId).style.display='block';const img=document.getElementById('cropImg'+(suffix||''));img.src=src;img.onload=()=>{const cs=cropStates[suffix||''];cs.nativeW=img.naturalWidth;cs.nativeH=img.naturalHeight;const wrap=document.getElementById(wrapId);const ww=wrap.offsetWidth,wh=wrap.offsetHeight;cs.minScale=Math.max(ww/cs.nativeW,wh/cs.nativeH);cs.scale=cs.minScale;cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;const sl=document.getElementById(sliderId);sl.min=Math.round(cs.minScale*100);sl.max=Math.round(cs.minScale*400);sl.value=Math.round(cs.minScale*100);applyTransform(suffix||'',wrapId);};}
+function applyTransform(suffix,wrapId){const cs=cropStates[suffix];if(!cs||!cs.nativeW)return;const img=document.getElementById('cropImg'+(suffix||''));const wrap=document.getElementById(wrapId);const ww=wrap.offsetWidth,wh=wrap.offsetHeight;const sw=cs.nativeW*cs.scale,sh=cs.nativeH*cs.scale;cs.ox=Math.min(0,Math.max(cs.ox,ww-sw));cs.oy=Math.min(0,Math.max(cs.oy,wh-sh));img.style.width=sw+'px';img.style.height=sh+'px';img.style.left=cs.ox+'px';img.style.top=cs.oy+'px';}
+function doCrop(wrapId,cs){const wrap=document.getElementById(wrapId);const ww=wrap.offsetWidth,wh=wrap.offsetHeight;const srcX=(-cs.ox)/cs.scale,srcY=(-cs.oy)/cs.scale,srcW=ww/cs.scale,srcH=wh/cs.scale;const canvas=document.getElementById('cropCanvas');canvas.width=856;canvas.height=540;const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const ni=new Image();ni.src=cs.originalSrc;ctx.drawImage(ni,srcX,srcY,srcW,srcH,0,0,856,540);return canvas.toDataURL('image/jpeg',0.95);}
+
+function setupDrag(pantallaId,getCropInfo){const panel=document.getElementById(pantallaId);let active=null;panel.addEventListener('mousedown',e=>{const info=getCropInfo(e.target);if(!info)return;active=info;info.cs.dragging=true;info.cs.startX=e.clientX;info.cs.startY=e.clientY;info.cs.startOx=info.cs.ox;info.cs.startOy=info.cs.oy;document.getElementById(info.wrapId).classList.add('grabbing');e.preventDefault();});panel.addEventListener('mousemove',e=>{if(!active||!active.cs.dragging)return;active.cs.ox=active.cs.startOx+(e.clientX-active.cs.startX);active.cs.oy=active.cs.startOy+(e.clientY-active.cs.startY);applyTransform(active.suffix,active.wrapId);});panel.addEventListener('mouseup',()=>{if(active){active.cs.dragging=false;document.getElementById(active.wrapId)?.classList.remove('grabbing');active=null;}});panel.addEventListener('touchstart',e=>{const info=getCropInfo(e.target);if(!info)return;active=info;const t=e.touches[0];info.cs.dragging=true;info.cs.startX=t.clientX;info.cs.startY=t.clientY;info.cs.startOx=info.cs.ox;info.cs.startOy=info.cs.oy;e.preventDefault();},{passive:false});panel.addEventListener('touchmove',e=>{if(!active||!active.cs.dragging)return;const t=e.touches[0];active.cs.ox=active.cs.startOx+(t.clientX-active.cs.startX);active.cs.oy=active.cs.startOy+(t.clientY-active.cs.startY);applyTransform(active.suffix,active.wrapId);e.preventDefault();},{passive:false});panel.addEventListener('touchend',()=>{if(active){active.cs.dragging=false;active=null;}});panel.addEventListener('input',e=>{let info=null;if(e.target.id==='zoomSlider')info={suffix:'',wrapId:'cropWrap'};else if(e.target.id==='zoomFront')info={suffix:'Front',wrapId:'cropWrapFront'};else if(e.target.id==='zoomBack')info={suffix:'Back',wrapId:'cropWrapBack'};if(!info)return;const cs=cropStates[info.suffix];if(!cs||!cs.nativeW)return;const wrap=document.getElementById(info.wrapId);const ww=wrap.offsetWidth,wh=wrap.offsetHeight;const ns=parseInt(e.target.value)/100;const osw=cs.nativeW*cs.scale,osh=cs.nativeH*cs.scale;const nsw=cs.nativeW*ns,nsh=cs.nativeH*ns;cs.ox=cs.ox-(nsw-osw)*(((ww/2)-cs.ox)/osw);cs.oy=cs.oy-(nsh-osh)*(((wh/2)-cs.oy)/osh);cs.scale=ns;applyTransform(info.suffix,info.wrapId);});}
+setupDrag('modal-formulario',t=>{if(document.getElementById('cropWrap')?.contains(t))return{suffix:'',wrapId:'cropWrap',cs:cropStates['']};return null;});
+setupDrag('modal-fisica',t=>{if(document.getElementById('cropWrapFront')?.contains(t))return{suffix:'Front',wrapId:'cropWrapFront',cs:cropStates['Front']};if(document.getElementById('cropWrapBack')?.contains(t))return{suffix:'Back',wrapId:'cropWrapBack',cs:cropStates['Back']};return null;});
+
+document.getElementById('fileInput').onchange=function(e){const f=e.target.files[0];if(f&&pendingFileCb){const r=new FileReader();r.onload=ev=>pendingFileCb(ev.target.result);r.readAsDataURL(f);}this.value='';};
+function pickFile(cb){pendingFileCb=cb;document.getElementById('fileInput').click();}
+function guardarCatalogo(){try{localStorage.setItem('DB_BIP_ALBUM_V2',JSON.stringify(catalogo));}catch(e){console.warn('localStorage lleno');}}
+function cerrarModal(id){document.getElementById(id).classList.remove('activa');}
+
+resetCrop('');resetCrop('Front');resetCrop('Back');
+initDB().then(()=>{const viejo=localStorage.getItem('DB_BIP_ALBUM');const nuevo=localStorage.getItem('DB_BIP_ALBUM_V2');if(nuevo)catalogo=JSON.parse(nuevo);else if(viejo){catalogo=JSON.parse(viejo);guardarCatalogo();}renderizar();});
+
+// Registrar Service Worker para PWA
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(()=>{
+      console.log('SW registrado');
+    }).catch(err=>{
+      console.warn('SW error:',err);
+    });
+  });
+}
+</script>
+</body>
+</html>
