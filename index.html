@@ -175,6 +175,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 
 /* ── CROP ──────────────────────────────────────────────────────────────── */
 .upload-area{width:100%;padding:12px;border:2px dashed var(--border2);border-radius:8px;text-align:center;cursor:pointer;color:var(--accent);font-size:var(--font-size-sm);font-weight:bold;margin-bottom:6px;background:var(--bg-secondary);}
+[data-theme="dark"] .upload-area{color:#3b82f6;}
 .crop-outer{display:none;margin-bottom:8px;}
 .crop-wrap{position:relative;width:100%;aspect-ratio:85/54;overflow:hidden;border-radius:16px;border:1px solid var(--border2);cursor:grab;background:#111;touch-action:none;}
 .crop-wrap.grabbing{cursor:grabbing;}
@@ -719,7 +720,7 @@ function setupDrag(pantallaId,getCropInfo){
     if(!info)return;
     const cs=cropStates[info.suffix];if(!cs||!cs.nativeW)return;
     const slider=document.getElementById(btn.dataset.target);
-    const step=parseFloat(slider.step)||0.1;
+    const step=(parseFloat(slider.step)||0.1)/100;
     const dir=btn.dataset.dir==='+'?1:-1;
     const ns=Math.min(Math.max(cs.scale+dir*step,parseFloat(slider.min)/100),parseFloat(slider.max)/100);
     slider.value=Math.round(ns*1000)/10;
