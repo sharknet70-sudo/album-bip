@@ -789,7 +789,7 @@ function exportarColeccion(){
 function importarColeccion(input){
   const f=input.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{
+  r.onload=async e=>{
     try{
       const datos=JSON.parse(e.target.result);
       if(!Array.isArray(datos))throw new Error('Formato inválido');
