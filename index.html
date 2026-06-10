@@ -102,6 +102,8 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .tabs{display:flex;background:var(--bg-card);border-bottom:2px solid var(--border);}
 .tab{flex:1;padding:8px 4px;text-align:center;font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;}
 .tab.activo{color:var(--accent);border-bottom-color:var(--accent);}
+[data-theme="dark"] .tab.activo{color:#3b82f6;border-bottom-color:#3b82f6;}
+[data-theme="dark"] .tab{color:var(--text-secondary);}
 
 /* ── TOOLBAR ───────────────────────────────────────────────────────────── */
 .toolbar{padding:8px 10px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;}
