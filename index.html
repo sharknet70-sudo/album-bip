@@ -622,7 +622,7 @@ document.getElementById('btnGuardar').onclick=async()=>{
   if(!titulo){alert('Por favor ingresa el nombre de la tarjeta.');return;}
   const cs=cropStates[''];
   let fi=cs.originalSrc;
-  if(cs.originalSrc&&cs.nativeW)fi=doCrop('cropWrap',cs);
+  if(cs.originalSrc&&cs.nativeW)fi=await doCrop('cropWrap',cs);
   const ex=editId?catalogo.find(x=>x.id===editId):null;
   const obj={id:editId||Date.now().toString(),titulo,fecha:document.getElementById('form-fecha').value,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',imgBase64:fi};
   if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
@@ -652,9 +652,9 @@ document.getElementById('btnGuardarFisica').onclick=async()=>{
   t.numSerie=document.getElementById('fisica-serie').value;
   const csF=cropStates['Front'],csB=cropStates['Back'];
   const fotos=await dbGet('fotos',selId)||{id:selId};
-  if(csF.originalSrc&&csF.nativeW)fotos.front=doCrop('cropWrapFront',csF);
+  if(csF.originalSrc&&csF.nativeW)fotos.front=await doCrop('cropWrapFront',csF);
   else if(csF.originalSrc)fotos.front=csF.originalSrc;
-  if(csB.originalSrc&&csB.nativeW)fotos.back=doCrop('cropWrapBack',csB);
+  if(csB.originalSrc&&csB.nativeW)fotos.back=await doCrop('cropWrapBack',csB);
   else if(csB.originalSrc)fotos.back=csB.originalSrc;
   await dbPut('fotos',fotos);
   guardarCatalogo();cerrarModal('modal-fisica');await verDetalle(selId);
@@ -696,8 +696,16 @@ function doCrop(wrapId,cs){
   const srcX=(-cs.ox)/cs.scale,srcY=(-cs.oy)/cs.scale,srcW=ww/cs.scale,srcH=wh/cs.scale;
   const canvas=document.getElementById('cropCanvas');canvas.width=856;canvas.height=540;
   const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-  const ni=new Image();ni.src=cs.originalSrc;ctx.drawImage(ni,srcX,srcY,srcW,srcH,0,0,856,540);
-  return canvas.toDataURL('image/jpeg',0.95);
+  return new Promise(resolve=>{
+    const ni=new Image();
+    ni.onload=()=>{
+      ctx.clearRect(0,0,856,540);
+      ctx.drawImage(ni,srcX,srcY,srcW,srcH,0,0,856,540);
+      resolve(canvas.toDataURL('image/jpeg',0.95));
+    };
+    ni.src=cs.originalSrc;
+    if(ni.complete&&ni.naturalWidth)ni.onload();
+  });
 }
 
 function setupDrag(pantallaId,getCropInfo){
