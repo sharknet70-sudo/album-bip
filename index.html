@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Álbum Bip!">
@@ -66,7 +67,23 @@
 
 /* ── RESET ─────────────────────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',sans-serif;transition:background-color 0.2s,color 0.2s,border-color 0.2s;}
-body{background:var(--bg-app);display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:20px;}
+html,body{height:100%;width:100%;overflow:hidden;}
+body{background:var(--bg-app);display:flex;justify-content:center;align-items:flex-start;min-height:100vh;min-height:100dvh;padding:20px;}
+
+/* ── RESPONSIVE MÓVIL ──────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  body{padding:0!important;background:var(--bg-frame);}
+  .celular-frame{
+    width:100%!important;
+    height:100vh!important;
+    height:100dvh!important;
+    min-height:unset!important;
+    border-radius:0!important;
+    border:none!important;
+    box-shadow:none!important;
+  }
+  .contenido-scroll{-webkit-overflow-scrolling:touch;}
+}
 
 /* ── FRAME ─────────────────────────────────────────────────────────────── */
 .celular-frame{width:340px;min-height:640px;background:var(--bg-frame);border-radius:24px;box-shadow:var(--shadow);border:7px solid #0f172a;overflow:hidden;display:flex;flex-direction:column;position:relative;}
@@ -692,7 +709,25 @@ initDB().then(()=>{
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js').then(reg=>{
+      // Revisa actualizaciones inmediatamente
+      reg.update();
+      // Cuando hay un nuevo SW esperando, recarga la página automáticamente
+      reg.addEventListener('updatefound',()=>{
+        const newWorker=reg.installing;
+        newWorker.addEventListener('statechange',()=>{
+          if(newWorker.state==='installed'&&navigator.serviceWorker.controller){
+            // Nuevo contenido disponible: forzar recarga
+            newWorker.postMessage({type:'SKIP_WAITING'});
+          }
+        });
+      });
+    }).catch(()=>{});
+    // Recarga la página cuando el SW nuevo toma control
+    let refreshing=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(!refreshing){refreshing=true;window.location.reload();}
+    });
   });
 }
 </script>
