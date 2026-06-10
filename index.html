@@ -227,8 +227,8 @@ lista.sort((a,b)=>{if(orden==='fecha_asc')return new Date(a.fecha)-new Date(b.fe
 if(!lista.length){grid.innerHTML=`<div class="empty-state"><div>${tabActual==='coleccion'?'⭐':'📋'}</div>${tabActual==='coleccion'?'Aún no tienes tarjetas marcadas como conseguidas.':'No se encontraron tarjetas.'}</div>`;return;}
 for(const t of lista){
 const el=document.createElement('div');el.className='tarjeta-bip'+(t.tengo?'':' bloqueada');el.onclick=()=>verDetalle(t.id);
-if(t.imgBase64){el.innerHTML=`<img class="bip-thumb" src="${t.imgBase64}" alt="${t.titulo}"><div class="check-icono">${t.tengo?'✔':'🔒'}</div><div class="logo-bip">bip!</div>`;}
-else{el.style.background=t.tengo?colorTipo(t.tipo):'#cbd5e1';el.innerHTML=`<div class="bip-color-bg"><span>${t.titulo}</span></div><div class="check-icono">${t.tengo?'✔':'🔒'}</div><div class="logo-bip">bip!</div>`;}
+if(t.imgBase64){el.innerHTML=`<img class="bip-thumb" src="${t.imgBase64}" alt="${t.titulo}"><div class="check-icono">${t.tengo?'✔':'🔒'}</div>`;}
+else{el.style.background=t.tengo?colorTipo(t.tipo):'#cbd5e1';el.innerHTML=`<div class="bip-color-bg"><span>${t.titulo}</span></div><div class="check-icono">${t.tengo?'✔':'🔒'}</div>`;}
 grid.appendChild(el);
 }
 }
