@@ -153,26 +153,6 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .flip-btn button{flex:1;padding:5px;border:1px solid var(--border2);border-radius:6px;font-size:var(--font-size-xs);font-weight:bold;cursor:pointer;background:var(--bg-secondary);color:var(--text-primary);}
 .flip-btn button.active{background:var(--accent);color:white;border-color:var(--accent);}
 
-/* ── VITRINA ───────────────────────────────────────────────────────────── */
-.vitrina-body{flex:1;display:flex;flex-direction:column;padding:18px;overflow:hidden;touch-action:pan-y;}
-.vitrina-stage{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;}
-.vitrina-stage .flip-container{width:100%;max-width:280px;perspective:1000px;}
-.vitrina-stage .flip-face{border-radius:16px;font-size:var(--font-size-base);box-shadow:0 6px 20px rgba(0,0,0,0.18);}
-.vitrina-stage .flip-face.bloqueada{flex-direction:column;gap:8px;}
-.vitrina-stage .flip-face .bip-color-bg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:14px;text-align:center;}
-.vitrina-stage .flip-face .bip-color-bg span{font-size:var(--font-size-lg);font-weight:bold;color:white;text-shadow:0 1px 3px rgba(0,0,0,0.3);}
-.vitrina-info{text-align:center;padding:14px 0 4px;flex-shrink:0;}
-.vitrina-nombre{font-size:var(--font-size-xl);font-weight:bold;color:var(--text-primary);margin-bottom:2px;}
-.vitrina-meta{font-size:var(--font-size-xs);color:var(--text-secondary);}
-.vitrina-nav{display:flex;align-items:center;gap:8px;padding-top:10px;flex-shrink:0;}
-.vitrina-btn{padding:10px;border:1px solid var(--border2);border-radius:10px;background:var(--bg-secondary);color:var(--text-primary);font-weight:bold;font-size:var(--font-size-base);cursor:pointer;}
-.vitrina-btn:active{background:var(--accent);color:white;border-color:var(--accent);}
-.vitrina-btn:disabled{opacity:0.4;cursor:default;}
-#vitrina-prev,#vitrina-next{flex:0 0 50px;font-size:20px;}
-#vitrina-flip-btn{flex:1;}
-.vitrina-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--text-tertiary);font-size:var(--font-size-base);text-align:center;padding:0 20px;}
-.vitrina-empty div{font-size:36px;}
-
 /* ── DETALLE ───────────────────────────────────────────────────────────── */
 .det-img-wrap{width:100%;aspect-ratio:85/54;border-radius:8px;overflow:hidden;background:var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:var(--font-size-sm);margin-bottom:8px;}
 .det-img-wrap img{width:100%;height:100%;object-fit:cover;}
@@ -255,7 +235,6 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
   <div class="header">
     <button class="btn-config" onclick="abrirEstadisticas()" title="Estadísticas">📊</button>
     <span class="header-title">Mi Álbum Bip!</span>
-    <button class="btn-config" onclick="abrirVitrina()" title="Vitrina">🖼️</button>
     <button class="btn-config" onclick="abrirConfig()" title="Configuración">⚙️</button>
   </div>
   <div class="progreso-container">
@@ -409,34 +388,6 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
       <span>Estadísticas</span>
     </div>
     <div class="cuerpo-modal" id="cuerpo-estadisticas"></div>
-  </div>
-
-  <!-- VITRINA -->
-  <div class="pantalla-secundaria" id="modal-vitrina">
-    <div class="navbar-modal">
-      <button class="btn-volver" onclick="cerrarModal('modal-vitrina')">←</button>
-      <span id="vitrina-titulo" style="flex:1">Vitrina</span>
-      <span id="vitrina-contador" style="font-size:var(--font-size-xs);font-weight:normal;opacity:0.85"></span>
-    </div>
-    <div class="vitrina-body" id="vitrina-body">
-      <div class="vitrina-stage" id="vitrina-stage">
-        <div class="flip-container" id="vitrinaFlip">
-          <div class="flip-inner">
-            <div class="flip-face" id="vitrina-front"></div>
-            <div class="flip-face flip-back" id="vitrina-back"></div>
-          </div>
-        </div>
-      </div>
-      <div class="vitrina-info">
-        <div class="vitrina-nombre" id="vitrina-nombre"></div>
-        <div class="vitrina-meta" id="vitrina-meta"></div>
-      </div>
-      <div class="vitrina-nav">
-        <button class="vitrina-btn" id="vitrina-prev">‹</button>
-        <button class="vitrina-btn" id="vitrina-flip-btn">🔄 Voltear</button>
-        <button class="vitrina-btn" id="vitrina-next">›</button>
-      </div>
-    </div>
   </div>
 
 </div>
@@ -638,87 +589,7 @@ function setLado(lado){
   document.getElementById('btnLadoB').classList.toggle('active',lado==='back');
 }
 
-// ── VITRINA ───────────────────────────────────────────────────────────────────
-let vitrinaLista=[],vitrinaIdx=0;
-
-async function abrirVitrina(){
-  vitrinaLista=tabActual==='coleccion'?catalogo.filter(t=>t.tengo):[...catalogo];
-  document.getElementById('vitrina-titulo').textContent=tabActual==='coleccion'?'Vitrina · Mi Colección':'Vitrina · Catálogo';
-  vitrinaIdx=0;
-  await renderVitrina();
-  document.getElementById('modal-vitrina').classList.add('activa');
-}
-
-async function renderVitrina(){
-  const stage=document.getElementById('vitrina-stage');
-  const total=vitrinaLista.length;
-  const contador=document.getElementById('vitrina-contador');
-  const flipC=document.getElementById('vitrinaFlip');
-  flipC.classList.remove('flipped');
-  if(!total){
-    contador.textContent='';
-    stage.innerHTML=`<div class="vitrina-empty"><div>${tabActual==='coleccion'?'⭐':'📋'}</div><span>${tabActual==='coleccion'?'Aún no tienes tarjetas en tu colección.':'Tu catálogo está vacío.'}</span></div>`;
-    document.getElementById('vitrina-nombre').textContent='';
-    document.getElementById('vitrina-meta').textContent='';
-    document.getElementById('vitrina-prev').disabled=true;
-    document.getElementById('vitrina-next').disabled=true;
-    document.getElementById('vitrina-flip-btn').disabled=true;
-    return;
-  }
-  if(!stage.contains(flipC))stage.innerHTML='',stage.appendChild(flipC);
-  const t=vitrinaLista[vitrinaIdx];
-  contador.textContent=`${vitrinaIdx+1} / ${total}`;
-  document.getElementById('vitrina-nombre').textContent=t.titulo;
-  document.getElementById('vitrina-meta').innerHTML=`<span class="badge" style="background:${colorTipo(t.tipo)}">${t.tipo}</span> &nbsp; ${fmtFecha(t.fecha)}`;
-  document.getElementById('vitrina-prev').disabled=vitrinaIdx<=0;
-  document.getElementById('vitrina-next').disabled=vitrinaIdx>=total-1;
-
-  const front=document.getElementById('vitrina-front');
-  const back=document.getElementById('vitrina-back');
-  if(t.tengo){
-    front.classList.remove('bloqueada');
-    if(t.imgBase64)front.innerHTML=`<img src="${t.imgBase64}" alt="${t.titulo}">`;
-    else front.innerHTML=`<div class="bip-color-bg" style="background:${colorTipo(t.tipo)}"><span>${t.titulo}</span></div>`;
-    const fotos=await dbGet('fotos',t.id)||{};
-    back.innerHTML=fotos.back?`<img src="${fotos.back}" alt="Reverso">`:'Reverso — sin foto';
-    if(!fotos.back&&!fotos.front){
-      document.getElementById('vitrina-flip-btn').disabled=true;
-    } else {
-      document.getElementById('vitrina-flip-btn').disabled=false;
-      if(fotos.front)front.innerHTML=`<img src="${fotos.front}" alt="${t.titulo}">`;
-    }
-  } else {
-    front.classList.add('bloqueada');
-    front.innerHTML=`<div class="bip-color-bg" style="background:var(--border2)"><span>🔒 ${t.titulo}</span></div>`;
-    back.innerHTML='Sin tarjeta física';
-    document.getElementById('vitrina-flip-btn').disabled=true;
-  }
-}
-
-function vitrinaPrev(){if(vitrinaIdx>0){vitrinaIdx--;renderVitrina();}}
-function vitrinaNext(){if(vitrinaIdx<vitrinaLista.length-1){vitrinaIdx++;renderVitrina();}}
-function vitrinaToggleFlip(){document.getElementById('vitrinaFlip').classList.toggle('flipped');}
-
-document.getElementById('vitrina-prev').onclick=vitrinaPrev;
-document.getElementById('vitrina-next').onclick=vitrinaNext;
-document.getElementById('vitrina-flip-btn').onclick=vitrinaToggleFlip;
-
-// swipe horizontal en la vitrina
-(function(){
-  const body=document.getElementById('vitrina-body');
-  let sx=0,sy=0,tracking=false;
-  body.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;tracking=true;},{passive:true});
-  body.addEventListener('touchend',e=>{
-    if(!tracking)return;tracking=false;
-    const t=e.changedTouches[0];
-    const dx=t.clientX-sx,dy=t.clientY-sy;
-    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){
-      if(dx<0)vitrinaNext();else vitrinaPrev();
-    }
-  },{passive:true});
-})();
-
-
+// ── FORMULARIO CATÁLOGO ───────────────────────────────────────────────────────
 function resetCrop(s){cropStates[s]={nativeW:0,nativeH:0,ox:0,oy:0,scale:1,minScale:1,originalSrc:'',dragging:false};}
 
 document.getElementById('btnAgregar').onclick=()=>{
