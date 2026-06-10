@@ -176,13 +176,15 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 /* ── CROP ──────────────────────────────────────────────────────────────── */
 .upload-area{width:100%;padding:12px;border:2px dashed var(--border2);border-radius:8px;text-align:center;cursor:pointer;color:var(--accent);font-size:var(--font-size-sm);font-weight:bold;margin-bottom:6px;background:var(--bg-secondary);}
 .crop-outer{display:none;margin-bottom:8px;}
-.crop-wrap{position:relative;width:100%;aspect-ratio:85/54;overflow:hidden;border-radius:8px;border:1px solid var(--border2);cursor:grab;background:#111;touch-action:none;}
+.crop-wrap{position:relative;width:100%;aspect-ratio:85/54;overflow:hidden;border-radius:16px;border:1px solid var(--border2);cursor:grab;background:#111;touch-action:none;}
 .crop-wrap.grabbing{cursor:grabbing;}
 .crop-wrap img{position:absolute;transform-origin:0 0;will-change:transform;image-rendering:high-quality;}
 .crop-hint{font-size:var(--font-size-xs);color:var(--text-secondary);text-align:center;margin-bottom:4px;}
 .crop-controls{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
 .crop-controls label{font-size:var(--font-size-xs);color:var(--text-secondary);white-space:nowrap;}
 .crop-controls input[type=range]{flex:1;accent-color:var(--accent);}
+.zoom-btn{flex-shrink:0;width:30px;height:30px;border-radius:50%;border:1px solid var(--border2);background:var(--bg-secondary);color:var(--text-primary);font-size:16px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;padding:0;}
+.zoom-btn:active{background:var(--accent);color:white;border-color:var(--accent);}
 .num-serie-input input{width:100%;padding:7px;border:1px solid var(--border2);border-radius:6px;font-size:var(--font-size-base);outline:none;margin-top:4px;background:var(--bg-card);color:var(--text-primary);}
 .num-serie-input input:focus{border-color:var(--accent);}
 
@@ -302,7 +304,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
       <div class="crop-outer" id="cropOuter">
         <div class="crop-wrap" id="cropWrap"><img id="cropImg" src="" alt=""></div>
         <p class="crop-hint">Arrastra para reencuadrar</p>
-        <div class="crop-controls"><label>Zoom</label><input type="range" id="zoomSlider" min="100" max="250" step="0.1" value="100"></div>
+        <div class="crop-controls"><label>Zoom</label><button type="button" class="zoom-btn" data-target="zoomSlider" data-dir="-">−</button><input type="range" id="zoomSlider" min="100" max="250" step="0.1" value="100"><button type="button" class="zoom-btn" data-target="zoomSlider" data-dir="+">+</button></div>
       </div>
       <button class="btn-accion btn-guardar" id="btnGuardar">Guardar en Catálogo</button>
     </div>
@@ -322,14 +324,14 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
       <div class="crop-outer" id="cropOuterFront">
         <div class="crop-wrap" id="cropWrapFront"><img id="cropImgFront" src="" alt=""></div>
         <p class="crop-hint">Arrastra para reencuadrar</p>
-        <div class="crop-controls"><label>Zoom</label><input type="range" id="zoomFront" min="100" max="250" step="0.1" value="100"></div>
+        <div class="crop-controls"><label>Zoom</label><button type="button" class="zoom-btn" data-target="zoomFront" data-dir="-">−</button><input type="range" id="zoomFront" min="100" max="250" step="0.1" value="100"><button type="button" class="zoom-btn" data-target="zoomFront" data-dir="+">+</button></div>
       </div>
       <p class="seccion-titulo">📸 Reverso de la Tarjeta</p>
       <div class="upload-area" id="uploadBack">📂 Subir foto del reverso</div>
       <div class="crop-outer" id="cropOuterBack">
         <div class="crop-wrap" id="cropWrapBack"><img id="cropImgBack" src="" alt=""></div>
         <p class="crop-hint">Arrastra para reencuadrar</p>
-        <div class="crop-controls"><label>Zoom</label><input type="range" id="zoomBack" min="100" max="250" step="0.1" value="100"></div>
+        <div class="crop-controls"><label>Zoom</label><button type="button" class="zoom-btn" data-target="zoomBack" data-dir="-">−</button><input type="range" id="zoomBack" min="100" max="250" step="0.1" value="100"><button type="button" class="zoom-btn" data-target="zoomBack" data-dir="+">+</button></div>
       </div>
       <button class="btn-accion btn-guardar" id="btnGuardarFisica">💾 Guardar Tarjeta Física</button>
     </div>
@@ -706,19 +708,39 @@ function setupDrag(pantallaId,getCropInfo){
   panel.addEventListener('touchmove',e=>{if(!active||!active.cs.dragging)return;const t=e.touches[0];active.cs.ox=active.cs.startOx+(t.clientX-active.cs.startX);active.cs.oy=active.cs.startOy+(t.clientY-active.cs.startY);applyTransform(active.suffix,active.wrapId);e.preventDefault();},{passive:false});
   panel.addEventListener('touchend',()=>{if(active){active.cs.dragging=false;active=null;}});
   panel.addEventListener('input',e=>{
-    let info=null;
-    if(e.target.id==='zoomSlider')info={suffix:'',wrapId:'cropWrap'};
-    else if(e.target.id==='zoomFront')info={suffix:'Front',wrapId:'cropWrapFront'};
-    else if(e.target.id==='zoomBack')info={suffix:'Back',wrapId:'cropWrapBack'};
+    const info=zoomInfoFromId(e.target.id);
+    if(!info)return;
+    applyZoom(info,parseFloat(e.target.value)/100);
+  });
+  panel.addEventListener('click',e=>{
+    const btn=e.target.closest('.zoom-btn');
+    if(!btn)return;
+    const info=zoomInfoFromId(btn.dataset.target);
     if(!info)return;
     const cs=cropStates[info.suffix];if(!cs||!cs.nativeW)return;
-    const wrap=document.getElementById(info.wrapId);const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
-    const ns=parseFloat(e.target.value)/100;
-    const osw=cs.nativeW*cs.scale,osh=cs.nativeH*cs.scale;
-    const nsw=cs.nativeW*ns,nsh=cs.nativeH*ns;
-    cs.ox=cs.ox-(nsw-osw)*(((ww/2)-cs.ox)/osw);cs.oy=cs.oy-(nsh-osh)*(((wh/2)-cs.oy)/osh);
-    cs.scale=ns;applyTransform(info.suffix,info.wrapId);
+    const slider=document.getElementById(btn.dataset.target);
+    const step=parseFloat(slider.step)||0.1;
+    const dir=btn.dataset.dir==='+'?1:-1;
+    const ns=Math.min(Math.max(cs.scale+dir*step,parseFloat(slider.min)/100),parseFloat(slider.max)/100);
+    slider.value=Math.round(ns*1000)/10;
+    applyZoom(info,ns);
   });
+}
+
+function zoomInfoFromId(id){
+  if(id==='zoomSlider')return{suffix:'',wrapId:'cropWrap'};
+  if(id==='zoomFront')return{suffix:'Front',wrapId:'cropWrapFront'};
+  if(id==='zoomBack')return{suffix:'Back',wrapId:'cropWrapBack'};
+  return null;
+}
+
+function applyZoom(info,ns){
+  const cs=cropStates[info.suffix];if(!cs||!cs.nativeW)return;
+  const wrap=document.getElementById(info.wrapId);const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
+  const osw=cs.nativeW*cs.scale,osh=cs.nativeH*cs.scale;
+  const nsw=cs.nativeW*ns,nsh=cs.nativeH*ns;
+  cs.ox=cs.ox-(nsw-osw)*(((ww/2)-cs.ox)/osw);cs.oy=cs.oy-(nsh-osh)*(((wh/2)-cs.oy)/osh);
+  cs.scale=ns;applyTransform(info.suffix,info.wrapId);
 }
 
 setupDrag('modal-formulario',t=>{if(document.getElementById('cropWrap')?.contains(t))return{suffix:'',wrapId:'cropWrap',cs:cropStates['']};return null;});
