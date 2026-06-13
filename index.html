@@ -113,6 +113,19 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .filter-row label{font-size:var(--font-size-xs);font-weight:bold;color:var(--text-secondary);white-space:nowrap;}
 .select-filtro{flex:1;padding:4px;border-radius:6px;border:1px solid var(--border2);font-size:var(--font-size-xs);outline:none;background:var(--bg-card);color:var(--text-primary);}
 
+/* ── ACORDEÓN POR AÑOS ─────────────────────────────────────────────────── */
+.acordeon-item{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--bg-card);}
+.acordeon-cabecera{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;user-select:none;}
+.acordeon-cabecera:active{background:var(--bg-secondary);}
+.acordeon-flecha{font-size:12px;color:var(--text-secondary);transition:transform 0.2s;flex-shrink:0;}
+.acordeon-item.abierto .acordeon-flecha{transform:rotate(90deg);}
+.acordeon-icono{font-size:18px;flex-shrink:0;}
+.acordeon-nombre{flex:1;font-size:var(--font-size-base);font-weight:bold;color:var(--text-primary);}
+.acordeon-conteo{font-size:var(--font-size-xs);color:var(--text-secondary);}
+.acordeon-cuerpo{display:none;padding:10px;border-top:1px solid var(--border);}
+.acordeon-item.abierto .acordeon-cuerpo{display:block;}
+.acordeon-cuerpo .cuadricula{margin:0;}
+
 /* ── GRID ──────────────────────────────────────────────────────────────── */
 .contenido-scroll{flex:1;overflow-y:auto;padding:10px;}
 .cuadricula{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
@@ -259,6 +272,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
         <option value="fecha_desc">Fecha (reciente)</option>
         <option value="nombre_asc">Nombre A-Z</option>
         <option value="nombre_desc">Nombre Z-A</option>
+        <option value="anios_carpetas">Años (carpetas)</option>
       </select>
       <label>Tipo:</label>
       <select class="select-filtro" id="filtro-tipo" onchange="renderizar()">
@@ -269,7 +283,10 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
       </select>
     </div>
   </div>
-  <div class="contenido-scroll"><div class="cuadricula" id="contenedor-grid"></div></div>
+  <div class="contenido-scroll">
+    <div class="cuadricula" id="contenedor-grid"></div>
+    <div id="contenedor-acordeon" style="display:none"></div>
+  </div>
   <button class="btn-agregar" id="btnAgregar">+</button>
 
   <!-- DETALLE -->
@@ -455,12 +472,77 @@ function setTab(t){
   renderizar();
 }
 
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function anioDeFecha(f){
+  if(!f)return'Sin fecha';
+  const p=f.split('-');
+  return p[0]||'Sin fecha';
+}
+function crearElTarjeta(t){
+  const el=document.createElement('div');
+  el.className='tarjeta-bip'+(t.tengo?'':' bloqueada');
+  el.onclick=()=>verDetalle(t.id);
+  const icono=t.tengo?`<div class="check-icono tengo">✔</div>`:`<div class="check-icono no-tengo">🔒</div>`;
+  if(t.imgBase64){
+    el.innerHTML=`<img class="bip-thumb" src="${t.imgBase64}" alt="${t.titulo}">${icono}<div class="logo-bip">bip!</div>`;
+  } else {
+    el.style.background=t.tengo?colorTipo(t.tipo):'';
+    el.innerHTML=`<div class="bip-color-bg"><span>${t.titulo}</span></div>${icono}<div class="logo-bip">bip!</div>`;
+  }
+  return el;
+}
+
+// recuerda qué años están abiertos entre renders
+let aniosAbiertos=new Set();
+
+function toggleAnio(anio){
+  if(aniosAbiertos.has(anio))aniosAbiertos.delete(anio);else aniosAbiertos.add(anio);
+  renderizar();
+}
+
+function renderAcordeonAnios(lista){
+  const cont=document.getElementById('contenedor-acordeon');
+  cont.innerHTML='';
+  // agrupar
+  let grupos={};
+  lista.forEach(t=>{
+    const a=anioDeFecha(t.fecha);
+    (grupos[a]=grupos[a]||[]).push(t);
+  });
+  let anios=Object.keys(grupos);
+  anios.sort((a,b)=>{if(a==='Sin fecha')return 1;if(b==='Sin fecha')return -1;return b.localeCompare(a);});
+
+  if(!anios.length){
+    cont.innerHTML=`<div class="empty-state"><div>📭</div>No se encontraron tarjetas.</div>`;
+    return;
+  }
+
+  anios.forEach(anio=>{
+    const tarjetas=[...grupos[anio]].sort((a,b)=>a.titulo.localeCompare(b.titulo));
+    const abierto=aniosAbiertos.has(anio);
+    const item=document.createElement('div');item.className='acordeon-item'+(abierto?' abierto':'');
+    const cab=document.createElement('div');cab.className='acordeon-cabecera';
+    cab.onclick=()=>toggleAnio(anio);
+    cab.innerHTML=`<span class="acordeon-flecha">▶</span><span class="acordeon-icono">📅</span><span class="acordeon-nombre">${anio}</span><span class="acordeon-conteo">${tarjetas.length} tarjeta${tarjetas.length===1?'':'s'}</span>`;
+    item.appendChild(cab);
+    const body=document.createElement('div');body.className='acordeon-cuerpo';
+    if(abierto){
+      const grid=document.createElement('div');grid.className='cuadricula';
+      tarjetas.forEach(t=>grid.appendChild(crearElTarjeta(t)));
+      body.appendChild(grid);
+    }
+    item.appendChild(body);
+    cont.appendChild(item);
+  });
+}
+
 // ── RENDER ────────────────────────────────────────────────────────────────────
 async function renderizar(){
   const q=(document.getElementById('searchInput').value||'').toLowerCase();
   const orden=document.getElementById('filtro-orden').value;
   const tipo=document.getElementById('filtro-tipo').value;
   const grid=document.getElementById('contenedor-grid');
+  const acordeon=document.getElementById('contenedor-acordeon');
   grid.innerHTML='';
   const total=catalogo.length,obt=catalogo.filter(t=>t.tengo).length,pct=total>0?Math.round(obt/total*100):0;
   document.getElementById('txt-progreso').textContent=`${obt} de ${total} (${pct}%)`;
@@ -469,6 +551,16 @@ async function renderizar(){
   if(tabActual==='coleccion')lista=lista.filter(t=>t.tengo);
   if(tipo!=='Todos')lista=lista.filter(t=>t.tipo===tipo);
   if(q)lista=lista.filter(t=>t.titulo.toLowerCase().includes(q)||(t.descripcion||'').toLowerCase().includes(q));
+
+  if(orden==='anios_carpetas'){
+    grid.style.display='none';
+    acordeon.style.display='block';
+    renderAcordeonAnios(lista);
+    return;
+  }
+  grid.style.display='grid';
+  acordeon.style.display='none';
+
   lista.sort((a,b)=>{
     if(orden==='fecha_asc')return new Date(a.fecha)-new Date(b.fecha);
     if(orden==='fecha_desc')return new Date(b.fecha)-new Date(a.fecha);
@@ -479,21 +571,7 @@ async function renderizar(){
     grid.innerHTML=`<div class="empty-state"><div>${tabActual==='coleccion'?'⭐':'📋'}</div>${tabActual==='coleccion'?'Aún no tienes tarjetas marcadas como conseguidas.':'No se encontraron tarjetas.'}</div>`;
     return;
   }
-  for(const t of lista){
-    const el=document.createElement('div');
-    el.className='tarjeta-bip'+(t.tengo?'':' bloqueada');
-    el.onclick=()=>verDetalle(t.id);
-    const icono=t.tengo
-      ?`<div class="check-icono tengo">✔</div>`
-      :`<div class="check-icono no-tengo">🔒</div>`;
-    if(t.imgBase64){
-      el.innerHTML=`<img class="bip-thumb" src="${t.imgBase64}" alt="${t.titulo}">${icono}<div class="logo-bip">bip!</div>`;
-    } else {
-      el.style.background=t.tengo?colorTipo(t.tipo):'';
-      el.innerHTML=`<div class="bip-color-bg"><span>${t.titulo}</span></div>${icono}<div class="logo-bip">bip!</div>`;
-    }
-    grid.appendChild(el);
-  }
+  for(const t of lista)grid.appendChild(crearElTarjeta(t));
 }
 
 // ── DETALLE ───────────────────────────────────────────────────────────────────
