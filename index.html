@@ -518,7 +518,7 @@ function renderAcordeonAnios(lista){
   }
 
   anios.forEach(anio=>{
-    const tarjetas=[...grupos[anio]].sort((a,b)=>a.titulo.localeCompare(b.titulo));
+    const tarjetas=[...grupos[anio]].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
     const abierto=aniosAbiertos.has(anio);
     const item=document.createElement('div');item.className='acordeon-item'+(abierto?' abierto':'');
     const cab=document.createElement('div');cab.className='acordeon-cabecera';
