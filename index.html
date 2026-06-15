@@ -699,30 +699,19 @@ function activarEdicion(t){
   document.getElementById('form-fecha').value=t.fecha;
   document.getElementById('form-tipo').value=t.tipo;
   document.getElementById('form-desc').value=t.descripcion||'';
-  // Si ya tiene imagen guardada, la reservamos pero NO mostramos el editor de crop
-  // Solo se activa el crop si el usuario sube una imagen nueva
-  if(t.imgBase64){
-    cropStates[''].originalSrc=t.imgBase64;
-    cropStates[''].existingImg=true; // marca que es imagen ya guardada
-    document.getElementById('uploadArea').textContent='✓ Imagen cargada (sube otra para cambiarla)';
-    document.getElementById('cropOuter').style.display='none';
-  } else {
-    cropStates[''].existingImg=false;
-    document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';
-    document.getElementById('cropOuter').style.display='none';
-  }
+  if(t.imgBase64){cropStates[''].originalSrc=t.imgBase64;document.getElementById('uploadArea').textContent='✓ Imagen cargada';setTimeout(()=>initCrop(t.imgBase64,'','cropWrap','cropOuter','zoomSlider'),60);}
+  else{document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';document.getElementById('cropOuter').style.display='none';}
   cerrarModal('modal-detalle');document.getElementById('modal-formulario').classList.add('activa');
 }
 
-document.getElementById('uploadArea').onclick=()=>pickFile(src=>{cropStates[''].originalSrc=src;cropStates[''].existingImg=false;initCrop(src,'','cropWrap','cropOuter','zoomSlider');});
+document.getElementById('uploadArea').onclick=()=>pickFile(src=>{cropStates[''].originalSrc=src;initCrop(src,'','cropWrap','cropOuter','zoomSlider');});
 
 document.getElementById('btnGuardar').onclick=async()=>{
   const titulo=document.getElementById('form-titulo').value.trim();
   if(!titulo){alert('Por favor ingresa el nombre de la tarjeta.');return;}
   const cs=cropStates[''];
   let fi=cs.originalSrc;
-  // Solo recortar si es imagen nueva subida por el usuario (no la existente sin cambios)
-  if(cs.originalSrc&&cs.nativeW&&!cs.existingImg)fi=await doCrop('cropWrap',cs);
+  if(cs.originalSrc&&cs.nativeW)fi=await doCrop('cropWrap',cs);
   const ex=editId?catalogo.find(x=>x.id===editId):null;
   const obj={id:editId||Date.now().toString(),titulo,fecha:document.getElementById('form-fecha').value,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',imgBase64:fi};
   if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
@@ -761,6 +750,8 @@ document.getElementById('btnGuardarFisica').onclick=async()=>{
 };
 
 // ── CROP ENGINE ───────────────────────────────────────────────────────────────
+// Usa wrapW/wrapH guardados en el último applyTransform para que doCrop
+// siempre use las dimensiones correctas aunque el panel ya no sea visible.
 function initCrop(src,suffix,wrapId,outerId,sliderId){
   document.getElementById(outerId).style.display='block';
   const img=document.getElementById('cropImg'+(suffix||''));
@@ -771,6 +762,7 @@ function initCrop(src,suffix,wrapId,outerId,sliderId){
     if(!ww||!wh){requestAnimationFrame(setupCrop);return;}
     const cs=cropStates[suffix||''];
     cs.nativeW=img.naturalWidth;cs.nativeH=img.naturalHeight;
+    cs.wrapW=ww;cs.wrapH=wh;
     cs.minScale=Math.max(ww/cs.nativeW,wh/cs.nativeH);cs.scale=cs.minScale;
     cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
     const sl=document.getElementById(sliderId);
@@ -790,20 +782,24 @@ function applyTransform(suffix,wrapId){
   const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
   const sw=cs.nativeW*cs.scale,sh=cs.nativeH*cs.scale;
   cs.ox=Math.min(0,Math.max(cs.ox,ww-sw));cs.oy=Math.min(0,Math.max(cs.oy,wh-sh));
+  // Guardar siempre las dimensiones CSS actuales del wrap
+  cs.wrapW=ww;cs.wrapH=wh;
   img.style.width=sw+'px';img.style.height=sh+'px';img.style.left=cs.ox+'px';img.style.top=cs.oy+'px';
 }
 
 function doCrop(wrapId,cs){
-  const wrap=document.getElementById(wrapId);
-  const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
-  const srcX=(-cs.ox)/cs.scale,srcY=(-cs.oy)/cs.scale,srcW=ww/cs.scale,srcH=wh/cs.scale;
+  // Usar dimensiones guardadas del último render (no offsetWidth que puede ser 0 al guardar)
+  const ww=cs.wrapW||document.getElementById(wrapId).offsetWidth;
+  const wh=cs.wrapH||document.getElementById(wrapId).offsetHeight;
+  const srcX=(-cs.ox)/cs.scale;
+  const srcY=(-cs.oy)/cs.scale;
+  const srcW=ww/cs.scale;
+  const srcH=wh/cs.scale;
   const canvas=document.getElementById('cropCanvas');canvas.width=850;canvas.height=540;
   const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   return new Promise(resolve=>{
     const ni=new Image();
     ni.onload=()=>{
-      ctx.fillStyle='#000000';
-      ctx.fillRect(0,0,850,540);
       ctx.clearRect(0,0,850,540);
       ctx.drawImage(ni,srcX,srcY,srcW,srcH,0,0,850,540);
       resolve(canvas.toDataURL('image/jpeg',0.95));
