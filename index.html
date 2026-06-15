@@ -398,8 +398,8 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
         </div>
       </div>
       <p class="seccion-titulo" style="margin-top:16px">Mis Datos</p>
-      <button class="btn-datos" onclick="exportarColeccion()">📤 Exportar colección (Hacer respaldo)</button>
-      <button class="btn-datos" onclick="document.getElementById('importInput').click()">📥 Importar colección (Cargar respaldo)</button>
+      <button class="btn-datos" onclick="exportarColeccion()">📤 Exportar colección (respaldo)</button>
+      <button class="btn-datos" onclick="document.getElementById('importInput').click()">📥 Importar colección</button>
       <input type="file" id="importInput" accept=".json" style="display:none" onchange="importarColeccion(this)">
     </div>
   </div>
@@ -750,8 +750,6 @@ document.getElementById('btnGuardarFisica').onclick=async()=>{
 };
 
 // ── CROP ENGINE ───────────────────────────────────────────────────────────────
-// Usa wrapW/wrapH guardados en el último applyTransform para que doCrop
-// siempre use las dimensiones correctas aunque el panel ya no sea visible.
 function initCrop(src,suffix,wrapId,outerId,sliderId){
   document.getElementById(outerId).style.display='block';
   const img=document.getElementById('cropImg'+(suffix||''));
@@ -762,7 +760,6 @@ function initCrop(src,suffix,wrapId,outerId,sliderId){
     if(!ww||!wh){requestAnimationFrame(setupCrop);return;}
     const cs=cropStates[suffix||''];
     cs.nativeW=img.naturalWidth;cs.nativeH=img.naturalHeight;
-    cs.wrapW=ww;cs.wrapH=wh;
     cs.minScale=Math.max(ww/cs.nativeW,wh/cs.nativeH);cs.scale=cs.minScale;
     cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
     const sl=document.getElementById(sliderId);
@@ -782,24 +779,20 @@ function applyTransform(suffix,wrapId){
   const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
   const sw=cs.nativeW*cs.scale,sh=cs.nativeH*cs.scale;
   cs.ox=Math.min(0,Math.max(cs.ox,ww-sw));cs.oy=Math.min(0,Math.max(cs.oy,wh-sh));
-  // Guardar siempre las dimensiones CSS actuales del wrap
-  cs.wrapW=ww;cs.wrapH=wh;
   img.style.width=sw+'px';img.style.height=sh+'px';img.style.left=cs.ox+'px';img.style.top=cs.oy+'px';
 }
 
 function doCrop(wrapId,cs){
-  // Usar dimensiones guardadas del último render (no offsetWidth que puede ser 0 al guardar)
-  const ww=cs.wrapW||document.getElementById(wrapId).offsetWidth;
-  const wh=cs.wrapH||document.getElementById(wrapId).offsetHeight;
-  const srcX=(-cs.ox)/cs.scale;
-  const srcY=(-cs.oy)/cs.scale;
-  const srcW=ww/cs.scale;
-  const srcH=wh/cs.scale;
+  const wrap=document.getElementById(wrapId);
+  const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
+  const srcX=Math.floor((-cs.ox)/cs.scale),srcY=Math.floor((-cs.oy)/cs.scale),srcW=Math.ceil(ww/cs.scale),srcH=Math.ceil(wh/cs.scale);
   const canvas=document.getElementById('cropCanvas');canvas.width=850;canvas.height=540;
   const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   return new Promise(resolve=>{
     const ni=new Image();
     ni.onload=()=>{
+      ctx.fillStyle='#000000';
+      ctx.fillRect(0,0,850,540);
       ctx.clearRect(0,0,850,540);
       ctx.drawImage(ni,srcX,srcY,srcW,srcH,0,0,850,540);
       resolve(canvas.toDataURL('image/jpeg',0.95));
