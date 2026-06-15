@@ -687,6 +687,7 @@ document.getElementById('btnAgregar').onclick=()=>{
   document.getElementById('form-desc').value='';document.getElementById('form-tipo').value='Evento';
   document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';
   document.getElementById('cropOuter').style.display='none';
+  document.getElementById('btnAgregar').style.display='none';
   document.getElementById('modal-formulario').classList.add('activa');
 };
 
@@ -930,7 +931,13 @@ async function guardarCatalogo(){
   // También guarda en localStorage como respaldo secundario
   try{localStorage.setItem('DB_BIP_ALBUM_V2',JSON.stringify(catalogo));}catch(e){}
 }
-function cerrarModal(id){document.getElementById(id).classList.remove('activa');}
+function cerrarModal(id){
+  document.getElementById(id).classList.remove('activa');
+  // Restaurar botón + solo si estamos en pestaña catálogo
+  if(id==='modal-formulario'&&tabActual==='catalogo'){
+    document.getElementById('btnAgregar').style.display='flex';
+  }
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 resetCrop('');resetCrop('Front');resetCrop('Back');
