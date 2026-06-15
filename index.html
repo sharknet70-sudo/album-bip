@@ -699,9 +699,10 @@ function activarEdicion(t){
   document.getElementById('form-fecha').value=t.fecha;
   document.getElementById('form-tipo').value=t.tipo;
   document.getElementById('form-desc').value=t.descripcion||'';
-  if(t.imgBase64){cropStates[''].originalSrc=t.imgBase64;document.getElementById('uploadArea').textContent='✓ Imagen cargada';setTimeout(()=>initCrop(t.imgBase64,'','cropWrap','cropOuter','zoomSlider'),60);}
+  if(t.imgBase64){cropStates[''].originalSrc=t.imgBase64;document.getElementById('uploadArea').textContent='✓ Imagen cargada';}
   else{document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';document.getElementById('cropOuter').style.display='none';}
   cerrarModal('modal-detalle');document.getElementById('modal-formulario').classList.add('activa');
+  if(t.imgBase64){requestAnimationFrame(()=>requestAnimationFrame(()=>initCrop(t.imgBase64,'','cropWrap','cropOuter','zoomSlider')));}
 }
 
 document.getElementById('uploadArea').onclick=()=>pickFile(src=>{cropStates[''].originalSrc=src;initCrop(src,'','cropWrap','cropOuter','zoomSlider');});
@@ -760,7 +761,6 @@ function initCrop(src,suffix,wrapId,outerId,sliderId){
     if(!ww||!wh){requestAnimationFrame(setupCrop);return;}
     const cs=cropStates[suffix||''];
     cs.nativeW=img.naturalWidth;cs.nativeH=img.naturalHeight;
-    cs.ww=ww;cs.wh=wh;
     cs.minScale=Math.max(ww/cs.nativeW,wh/cs.nativeH);cs.scale=cs.minScale;
     cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
     const sl=document.getElementById(sliderId);
@@ -784,8 +784,8 @@ function applyTransform(suffix,wrapId){
 }
 
 function doCrop(wrapId,cs){
-  const ww=cs.ww||document.getElementById(wrapId).offsetWidth;
-  const wh=cs.wh||document.getElementById(wrapId).offsetHeight;
+  const wrap=document.getElementById(wrapId);
+  const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
   const srcX=(-cs.ox)/cs.scale,srcY=(-cs.oy)/cs.scale,srcW=ww/cs.scale,srcH=wh/cs.scale;
   const canvas=document.getElementById('cropCanvas');canvas.width=850;canvas.height=540;
   const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
