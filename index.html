@@ -754,11 +754,12 @@ function initCrop(src,suffix,wrapId,outerId,sliderId){
   document.getElementById(outerId).style.display='block';
   const img=document.getElementById('cropImg'+(suffix||''));
   img.src=src;
-  img.onload=()=>{
-    const cs=cropStates[suffix||''];
-    cs.nativeW=img.naturalWidth;cs.nativeH=img.naturalHeight;
+  function setupCrop(){
     const wrap=document.getElementById(wrapId);
     const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
+    if(!ww||!wh){requestAnimationFrame(setupCrop);return;}
+    const cs=cropStates[suffix||''];
+    cs.nativeW=img.naturalWidth;cs.nativeH=img.naturalHeight;
     cs.minScale=Math.max(ww/cs.nativeW,wh/cs.nativeH);cs.scale=cs.minScale;
     cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
     const sl=document.getElementById(sliderId);
@@ -766,7 +767,9 @@ function initCrop(src,suffix,wrapId,outerId,sliderId){
     const maxVal=Math.min(minVal*2.5,250);
     sl.min=minVal;sl.max=maxVal;sl.step=0.1;sl.value=minVal;
     applyTransform(suffix||'',wrapId);
-  };
+  }
+  img.onload=()=>requestAnimationFrame(setupCrop);
+  if(img.complete&&img.naturalWidth)requestAnimationFrame(setupCrop);
 }
 
 function applyTransform(suffix,wrapId){
@@ -791,7 +794,7 @@ function doCrop(wrapId,cs){
       ctx.fillStyle='#000000';
       ctx.fillRect(0,0,850,540);
       ctx.clearRect(0,0,850,540);
-      ctx.drawImage(ni,srcX,srcY,srcW,srcH,0,0,856,540);
+      ctx.drawImage(ni,srcX,srcY,srcW,srcH,0,0,850,540);
       resolve(canvas.toDataURL('image/jpeg',0.95));
     };
     ni.src=cs.originalSrc;
