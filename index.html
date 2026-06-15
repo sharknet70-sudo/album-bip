@@ -398,8 +398,8 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
         </div>
       </div>
       <p class="seccion-titulo" style="margin-top:16px">Mis Datos</p>
-      <button class="btn-datos" onclick="exportarColeccion()">📤 Exportar colección (respaldo)</button>
-      <button class="btn-datos" onclick="document.getElementById('importInput').click()">📥 Importar colección</button>
+      <button class="btn-datos" onclick="exportarColeccion()">📤 Exportar colección (Hacer respaldo)</button>
+      <button class="btn-datos" onclick="document.getElementById('importInput').click()">📥 Importar colección (Cargar respaldo)</button>
       <input type="file" id="importInput" accept=".json" style="display:none" onchange="importarColeccion(this)">
     </div>
   </div>
@@ -699,19 +699,30 @@ function activarEdicion(t){
   document.getElementById('form-fecha').value=t.fecha;
   document.getElementById('form-tipo').value=t.tipo;
   document.getElementById('form-desc').value=t.descripcion||'';
-  if(t.imgBase64){cropStates[''].originalSrc=t.imgBase64;document.getElementById('uploadArea').textContent='✓ Imagen cargada';setTimeout(()=>initCrop(t.imgBase64,'','cropWrap','cropOuter','zoomSlider'),60);}
-  else{document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';document.getElementById('cropOuter').style.display='none';}
+  // Si ya tiene imagen guardada, la reservamos pero NO mostramos el editor de crop
+  // Solo se activa el crop si el usuario sube una imagen nueva
+  if(t.imgBase64){
+    cropStates[''].originalSrc=t.imgBase64;
+    cropStates[''].existingImg=true; // marca que es imagen ya guardada
+    document.getElementById('uploadArea').textContent='✓ Imagen cargada (sube otra para cambiarla)';
+    document.getElementById('cropOuter').style.display='none';
+  } else {
+    cropStates[''].existingImg=false;
+    document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';
+    document.getElementById('cropOuter').style.display='none';
+  }
   cerrarModal('modal-detalle');document.getElementById('modal-formulario').classList.add('activa');
 }
 
-document.getElementById('uploadArea').onclick=()=>pickFile(src=>{cropStates[''].originalSrc=src;initCrop(src,'','cropWrap','cropOuter','zoomSlider');});
+document.getElementById('uploadArea').onclick=()=>pickFile(src=>{cropStates[''].originalSrc=src;cropStates[''].existingImg=false;initCrop(src,'','cropWrap','cropOuter','zoomSlider');});
 
 document.getElementById('btnGuardar').onclick=async()=>{
   const titulo=document.getElementById('form-titulo').value.trim();
   if(!titulo){alert('Por favor ingresa el nombre de la tarjeta.');return;}
   const cs=cropStates[''];
   let fi=cs.originalSrc;
-  if(cs.originalSrc&&cs.nativeW)fi=await doCrop('cropWrap',cs);
+  // Solo recortar si es imagen nueva subida por el usuario (no la existente sin cambios)
+  if(cs.originalSrc&&cs.nativeW&&!cs.existingImg)fi=await doCrop('cropWrap',cs);
   const ex=editId?catalogo.find(x=>x.id===editId):null;
   const obj={id:editId||Date.now().toString(),titulo,fecha:document.getElementById('form-fecha').value,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',imgBase64:fi};
   if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
