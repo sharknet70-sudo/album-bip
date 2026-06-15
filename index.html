@@ -783,12 +783,12 @@ function doCrop(wrapId,cs){
   const wrap=document.getElementById(wrapId);
   const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
   const srcX=(-cs.ox)/cs.scale,srcY=(-cs.oy)/cs.scale,srcW=ww/cs.scale,srcH=wh/cs.scale;
-  const canvas=document.getElementById('cropCanvas');canvas.width=856;canvas.height=540;
+  const canvas=document.getElementById('cropCanvas');canvas.width=850;canvas.height=540;
   const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   return new Promise(resolve=>{
     const ni=new Image();
     ni.onload=()=>{
-      ctx.clearRect(0,0,856,540);
+      ctx.clearRect(0,0,850,540);
       ctx.drawImage(ni,srcX,srcY,srcW,srcH,0,0,856,540);
       resolve(canvas.toDataURL('image/jpeg',0.95));
     };
