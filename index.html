@@ -101,7 +101,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 
 /* ── TABS ──────────────────────────────────────────────────────────────── */
 .tabs{display:flex;background:var(--bg-card);border-bottom:2px solid var(--border);}
-.tab{flex:1;padding:8px 4px;text-align:center;font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;}
+.tab{flex:1;padding:8px 2px;text-align:center;font-size:10px;font-weight:bold;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;}
 .tab.activo{color:var(--accent);border-bottom-color:var(--accent);}
 [data-theme="dark"] .tab.activo{color:#3b82f6;border-bottom-color:#3b82f6;}
 [data-theme="dark"] .tab{color:var(--text-secondary);}
@@ -261,6 +261,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
   <div class="tabs">
     <div class="tab activo" id="tab-catalogo" onclick="setTab('catalogo')">📋 Catálogo</div>
     <div class="tab" id="tab-coleccion" onclick="setTab('coleccion')">⭐ Mi Colección</div>
+    <div class="tab" id="tab-conseguir" onclick="setTab('conseguir')">🎯 Por Conseguir</div>
   </div>
   <div class="toolbar">
     <div class="search-box">
@@ -471,6 +472,9 @@ function setTab(t){
   tabActual=t;
   document.getElementById('tab-catalogo').classList.toggle('activo',t==='catalogo');
   document.getElementById('tab-coleccion').classList.toggle('activo',t==='coleccion');
+  document.getElementById('tab-conseguir').classList.toggle('activo',t==='conseguir');
+  // El botón + solo aparece en Catálogo
+  document.getElementById('btnAgregar').style.display=t==='catalogo'?'flex':'none';
   renderizar();
 }
 
@@ -551,6 +555,7 @@ async function renderizar(){
   document.getElementById('barra-progreso').style.width=pct+'%';
   let lista=[...catalogo];
   if(tabActual==='coleccion')lista=lista.filter(t=>t.tengo);
+  if(tabActual==='conseguir')lista=lista.filter(t=>!t.tengo);
   if(tipo!=='Todos')lista=lista.filter(t=>t.tipo===tipo);
   if(q)lista=lista.filter(t=>t.titulo.toLowerCase().includes(q)||(t.descripcion||'').toLowerCase().includes(q));
 
@@ -570,7 +575,9 @@ async function renderizar(){
     return b.titulo.localeCompare(a.titulo);
   });
   if(!lista.length){
-    grid.innerHTML=`<div class="empty-state"><div>${tabActual==='coleccion'?'⭐':'📋'}</div>${tabActual==='coleccion'?'Aún no tienes tarjetas marcadas como conseguidas.':'No se encontraron tarjetas.'}</div>`;
+    const emptyMsg=tabActual==='coleccion'?'Aún no tienes tarjetas marcadas como conseguidas.':tabActual==='conseguir'?'🎉 ¡Tienes todas las tarjetas del catálogo!':'No se encontraron tarjetas.';
+    const emptyIcon=tabActual==='coleccion'?'⭐':tabActual==='conseguir'?'🏆':'📋';
+    grid.innerHTML=`<div class="empty-state"><div>${emptyIcon}</div>${emptyMsg}</div>`;
     return;
   }
   for(const t of lista)grid.appendChild(crearElTarjeta(t));
