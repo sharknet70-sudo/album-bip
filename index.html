@@ -956,27 +956,10 @@ initDB().then(async()=>{
 });
 
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
+// Registro simple: sin auto-reload para no interrumpir la sesión ni perder datos
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js').then(reg=>{
-      // Revisa actualizaciones inmediatamente
-      reg.update();
-      // Cuando hay un nuevo SW esperando, recarga la página automáticamente
-      reg.addEventListener('updatefound',()=>{
-        const newWorker=reg.installing;
-        newWorker.addEventListener('statechange',()=>{
-          if(newWorker.state==='installed'&&navigator.serviceWorker.controller){
-            // Nuevo contenido disponible: forzar recarga
-            newWorker.postMessage({type:'SKIP_WAITING'});
-          }
-        });
-      });
-    }).catch(()=>{});
-    // Recarga la página cuando el SW nuevo toma control
-    let refreshing=false;
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      if(!refreshing){refreshing=true;window.location.reload();}
-    });
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
   });
 }
 </script>
