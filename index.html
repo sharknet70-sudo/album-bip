@@ -145,6 +145,9 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .empty-state div{font-size:32px;margin-bottom:8px;}
 .btn-agregar{position:absolute;bottom:20px;right:15px;width:52px;height:52px;background:#ffcc00;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:26px;font-weight:bold;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:100;color:#0f172a;}
 @media (max-width:480px){.btn-agregar{position:fixed;bottom:24px;right:20px;bottom:calc(24px + env(safe-area-inset-bottom));}}
+/* Ocultar botón + cuando cualquier pantalla secundaria está activa */
+.pantalla-secundaria.activa ~ .btn-agregar,
+.celular-frame:has(.pantalla-secundaria.activa) .btn-agregar{display:none!important;}
 
 /* ── PANTALLAS SECUNDARIAS ─────────────────────────────────────────────── */
 .pantalla-secundaria{position:absolute;top:0;left:0;width:100%;height:100%;background:var(--bg-frame);z-index:20;display:flex;flex-direction:column;transform:translateY(100%);transition:transform 0.22s ease;}
@@ -473,7 +476,6 @@ function setTab(t){
   document.getElementById('tab-catalogo').classList.toggle('activo',t==='catalogo');
   document.getElementById('tab-coleccion').classList.toggle('activo',t==='coleccion');
   document.getElementById('tab-conseguir').classList.toggle('activo',t==='conseguir');
-  // El botón + solo aparece en Catálogo
   document.getElementById('btnAgregar').style.display=t==='catalogo'?'flex':'none';
   renderizar();
 }
@@ -687,7 +689,6 @@ document.getElementById('btnAgregar').onclick=()=>{
   document.getElementById('form-desc').value='';document.getElementById('form-tipo').value='Evento';
   document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';
   document.getElementById('cropOuter').style.display='none';
-  document.getElementById('btnAgregar').style.display='none';
   document.getElementById('modal-formulario').classList.add('activa');
 };
 
@@ -931,13 +932,7 @@ async function guardarCatalogo(){
   // También guarda en localStorage como respaldo secundario
   try{localStorage.setItem('DB_BIP_ALBUM_V2',JSON.stringify(catalogo));}catch(e){}
 }
-function cerrarModal(id){
-  document.getElementById(id).classList.remove('activa');
-  // Restaurar botón + solo si estamos en pestaña catálogo
-  if(id==='modal-formulario'&&tabActual==='catalogo'){
-    document.getElementById('btnAgregar').style.display='flex';
-  }
-}
+function cerrarModal(id){document.getElementById(id).classList.remove('activa');}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 resetCrop('');resetCrop('Front');resetCrop('Back');
