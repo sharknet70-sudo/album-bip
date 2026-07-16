@@ -248,12 +248,13 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .conseguida-texto{color:white;font-weight:bold;font-size:16px;text-shadow:0 2px 8px rgba(0,0,0,0.5);}
 
 /* ── VISOR DE IMAGEN (zoom rápido) ─────────────────────────────────────── */
-.visor-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:none;flex-direction:column;touch-action:none;}
+.visor-overlay{position:fixed;inset:0;background:#000;z-index:500;display:none;flex-direction:column;touch-action:none;}
 .visor-overlay.activa{display:flex;}
 .visor-top{display:flex;justify-content:flex-end;padding:14px;flex-shrink:0;}
 .visor-cerrar{background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;}
 .visor-body{flex:1;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;touch-action:none;}
 .visor-body img{position:absolute;max-width:none;max-height:none;will-change:transform;user-select:none;-webkit-user-drag:none;}
+.visor-body img.redondeada{border-radius:8px;}
 .visor-hint{text-align:center;color:rgba(255,255,255,0.55);font-size:11px;padding:10px 0 16px;flex-shrink:0;}
 .det-img-wrap{cursor:zoom-in;}
 .flip-container{position:relative;}
@@ -669,7 +670,7 @@ async function verDetalle(id){
   const imgDiv=document.createElement('div');imgDiv.className='det-img-wrap';
   if(t.imgBase64){
     imgDiv.innerHTML=`<img src="${t.imgBase64}" alt="${t.titulo}">`;
-    imgDiv.onclick=()=>abrirVisor(t.imgBase64);
+    imgDiv.onclick=()=>abrirVisor(t.imgBase64,true);
   }
   else{imgDiv.textContent='Sin imagen de catálogo';imgDiv.style.cursor='default';}
   c.appendChild(imgDiv);
@@ -772,7 +773,7 @@ function verRepetida(id){
       <button class="zoom-btn" style="width:44px;height:44px;font-size:22px" onclick="ajustarRepetida(1)">+</button>
     </div>
     <p style="text-align:center;color:var(--text-tertiary);font-size:var(--font-size-xs)">Si llega a 0, la tarjeta se quita de esta pestaña.</p>`;
-  if(t.imgBase64)document.getElementById('repImgWrap').onclick=()=>abrirVisor(t.imgBase64);
+  if(t.imgBase64)document.getElementById('repImgWrap').onclick=()=>abrirVisor(t.imgBase64,true);
   document.getElementById('modal-repetida').classList.add('activa');
 }
 
@@ -919,13 +920,17 @@ function applyTransform(suffix,wrapId){
   const wrap=document.getElementById(wrapId);
   const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
   const sw=cs.nativeW*cs.scale,sh=cs.nativeH*cs.scale;
-  cs.ox=Math.min(0,Math.max(cs.ox,ww-sw));cs.oy=Math.min(0,Math.max(cs.oy,wh-sh));
+  const rotActiva=Math.abs((cs.rotBase||0)+(cs.rotFine||0))>0.01;
+  if(!rotActiva){
+    // solo se puede acotar el arrastre matemáticamente cuando no hay rotación
+    cs.ox=Math.min(0,Math.max(cs.ox,ww-sw));cs.oy=Math.min(0,Math.max(cs.oy,wh-sh));
+  }
   img.style.width=sw+'px';img.style.height=sh+'px';img.style.left=cs.ox+'px';img.style.top=cs.oy+'px';
   const rotLayer=document.getElementById(CROP_MAP[suffix].rotLayerId);
   if(rotLayer)rotLayer.style.transform=`rotate(${(cs.rotBase||0)+(cs.rotFine||0)}deg)`;
 }
 
-// recalcula el zoom mínimo cuando cambia la rotación, y reencuadra si es necesario
+// recalcula el zoom mínimo cuando cambia la rotación y reencuadra centrado
 function recalcMinScale(suffix){
   const cs=cropStates[suffix];if(!cs||!cs.nativeW)return;
   const map=CROP_MAP[suffix];
@@ -933,6 +938,7 @@ function recalcMinScale(suffix){
   const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
   cs.minScale=computeMinScale(cs,ww,wh);
   if(cs.scale<cs.minScale)cs.scale=cs.minScale;
+  cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
   const sl=document.getElementById(map.sliderId);
   const minVal=Math.round(cs.minScale*1000)/10;
   sl.min=minVal;
@@ -981,9 +987,61 @@ function setupDrag(pantallaId,getCropInfo){
   panel.addEventListener('mousedown',e=>{const info=getCropInfo(e.target);if(!info)return;active=info;info.cs.dragging=true;info.cs.startX=e.clientX;info.cs.startY=e.clientY;info.cs.startOx=info.cs.ox;info.cs.startOy=info.cs.oy;document.getElementById(info.wrapId).classList.add('grabbing');e.preventDefault();});
   panel.addEventListener('mousemove',e=>{if(!active||!active.cs.dragging)return;active.cs.ox=active.cs.startOx+(e.clientX-active.cs.startX);active.cs.oy=active.cs.startOy+(e.clientY-active.cs.startY);applyTransform(active.suffix,active.wrapId);});
   panel.addEventListener('mouseup',()=>{if(active){active.cs.dragging=false;document.getElementById(active.wrapId)?.classList.remove('grabbing');active=null;}});
-  panel.addEventListener('touchstart',e=>{const info=getCropInfo(e.target);if(!info)return;active=info;const t=e.touches[0];info.cs.dragging=true;info.cs.startX=t.clientX;info.cs.startY=t.clientY;info.cs.startOx=info.cs.ox;info.cs.startOy=info.cs.oy;e.preventDefault();},{passive:false});
-  panel.addEventListener('touchmove',e=>{if(!active||!active.cs.dragging)return;const t=e.touches[0];active.cs.ox=active.cs.startOx+(t.clientX-active.cs.startX);active.cs.oy=active.cs.startOy+(t.clientY-active.cs.startY);applyTransform(active.suffix,active.wrapId);e.preventDefault();},{passive:false});
-  panel.addEventListener('touchend',()=>{if(active){active.cs.dragging=false;active=null;}});
+  panel.addEventListener('touchstart',e=>{
+    const info=getCropInfo(e.target);if(!info)return;active=info;
+    const cs=info.cs;
+    if(e.touches.length===1){
+      const t=e.touches[0];
+      cs.dragging=true;cs.startX=t.clientX;cs.startY=t.clientY;cs.startOx=cs.ox;cs.startOy=cs.oy;
+    } else if(e.touches.length>=2){
+      cs.dragging=false;
+      const t0=e.touches[0],t1=e.touches[1];
+      cs.pinchStartDist=Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY);
+      cs.pinchStartAngle=Math.atan2(t1.clientY-t0.clientY,t1.clientX-t0.clientX)*180/Math.PI;
+      cs.pinchStartScale=cs.scale;
+      cs.pinchStartRotFine=cs.rotFine||0;
+      cs.pinchStartOx=cs.ox;cs.pinchStartOy=cs.oy;
+      const wrap=document.getElementById(info.wrapId);const rect=wrap.getBoundingClientRect();
+      cs.pinchCx=(t0.clientX+t1.clientX)/2-rect.left;
+      cs.pinchCy=(t0.clientY+t1.clientY)/2-rect.top;
+    }
+    e.preventDefault();
+  },{passive:false});
+  panel.addEventListener('touchmove',e=>{
+    if(!active)return;const cs=active.cs;
+    if(e.touches.length===1&&cs.dragging){
+      const t=e.touches[0];
+      cs.ox=cs.startOx+(t.clientX-cs.startX);cs.oy=cs.startOy+(t.clientY-cs.startY);
+      applyTransform(active.suffix,active.wrapId);
+    } else if(e.touches.length>=2){
+      const t0=e.touches[0],t1=e.touches[1];
+      const dist=Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY);
+      const angle=Math.atan2(t1.clientY-t0.clientY,t1.clientX-t0.clientX)*180/Math.PI;
+      const ratio=dist/(cs.pinchStartDist||1);
+      let deltaAngle=angle-cs.pinchStartAngle;
+      if(deltaAngle>180)deltaAngle-=360;if(deltaAngle<-180)deltaAngle+=360;
+      cs.rotFine=Math.min(15,Math.max(-15,cs.pinchStartRotFine+deltaAngle));
+      const map=CROP_MAP[active.suffix];
+      const wrap=document.getElementById(map.wrapId);const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
+      cs.minScale=computeMinScale(cs,ww,wh);
+      let ns=Math.min(Math.max(cs.pinchStartScale*ratio,cs.minScale),cs.minScale*2.5);
+      cs.ox=cs.pinchCx-(cs.pinchCx-cs.pinchStartOx)*(ns/cs.pinchStartScale);
+      cs.oy=cs.pinchCy-(cs.pinchCy-cs.pinchStartOy)*(ns/cs.pinchStartScale);
+      cs.scale=ns;
+      applyTransform(active.suffix,active.wrapId);
+      const sl=document.getElementById(map.sliderId);if(sl)sl.value=Math.round(cs.scale*1000)/10;
+      const lvl=document.querySelector(`.level-slider[data-suffix="${active.suffix}"]`);if(lvl)lvl.value=Math.round(cs.rotFine*10)/10;
+    }
+    e.preventDefault();
+  },{passive:false});
+  panel.addEventListener('touchend',e=>{
+    if(!active)return;const cs=active.cs;
+    if(e.touches.length===0){cs.dragging=false;active=null;}
+    else if(e.touches.length===1){
+      const t=e.touches[0];
+      cs.dragging=true;cs.startX=t.clientX;cs.startY=t.clientY;cs.startOx=cs.ox;cs.startOy=cs.oy;
+    }
+  });
   panel.addEventListener('input',e=>{
     if(e.target.classList.contains('level-slider')){
       nivelar(e.target.dataset.suffix,parseFloat(e.target.value));
@@ -1035,10 +1093,11 @@ setupDrag('modal-fisica',t=>{
 
 // ── VISOR DE IMAGEN (zoom rápido, solo lectura) ─────────────────────────────────
 let visorState=null,fotosActuales=null;
-function abrirVisor(src){
+function abrirVisor(src,redondeada){
   if(!src)return;
   const img=document.getElementById('visorImg');
   img.src=src;
+  img.classList.toggle('redondeada',!!redondeada);
   img.onload=()=>{
     const body=document.getElementById('visorBody');
     const bw=body.offsetWidth,bh=body.offsetHeight;
