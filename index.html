@@ -172,8 +172,8 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .flip-btn button.active{background:var(--accent);color:white;border-color:var(--accent);}
 
 /* ── DETALLE ───────────────────────────────────────────────────────────── */
-.det-img-wrap{width:100%;aspect-ratio:85/54;border-radius:8px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:var(--font-size-sm);margin-bottom:8px;}
-.det-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+.det-img-wrap{width:100%;aspect-ratio:85/54;border-radius:8px;overflow:hidden;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:var(--font-size-sm);margin-bottom:8px;}
+.det-img-wrap img{width:calc(100% + 4px);height:calc(100% + 4px);margin:-1px -1px -3px -1px;object-fit:cover;object-position:center bottom;display:block;}
 .det-row{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
 .det-label{font-size:var(--font-size-xs);color:var(--text-tertiary);min-width:80px;font-weight:bold;padding-top:1px;}
 .det-val{font-size:var(--font-size-base);color:var(--text-primary);flex:1;line-height:1.4;}
@@ -978,19 +978,19 @@ function doCrop(wrapId,cs){
   const wrap=document.getElementById(wrapId);
   const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
   const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
-  const k=850/ww;
+  const kx=850/ww,ky=540/wh;
   const canvas=document.getElementById('cropCanvas');canvas.width=850;canvas.height=540;
   const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   return new Promise(resolve=>{
     const ni=new Image();
     ni.onload=()=>{
       ctx.clearRect(0,0,850,540);
-      ctx.fillStyle='#0b1220';ctx.fillRect(0,0,850,540);
       ctx.save();
-      ctx.translate(425,270);
+      ctx.scale(kx,ky);
+      ctx.translate(ww/2,wh/2);
       ctx.rotate(rad);
-      ctx.translate(-425,-270);
-      ctx.drawImage(ni,0,0,ni.naturalWidth,ni.naturalHeight,cs.ox*k,cs.oy*k,cs.nativeW*cs.scale*k,cs.nativeH*cs.scale*k);
+      ctx.translate(-ww/2,-wh/2);
+      ctx.drawImage(ni,0,0,ni.naturalWidth,ni.naturalHeight,cs.ox,cs.oy,cs.nativeW*cs.scale,cs.nativeH*cs.scale);
       ctx.restore();
       resolve(canvas.toDataURL('image/jpeg',0.95));
     };
