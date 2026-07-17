@@ -294,7 +294,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .dialogo-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:600;display:none;align-items:center;justify-content:center;padding:24px;}
 .dialogo-overlay.activa{display:flex;}
 .dialogo-box{background:var(--bg-card);border-radius:14px;padding:20px;max-width:340px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,0.45);border:1px solid var(--border2);}
-.dialogo-mensaje{font-size:var(--font-size-base);color:var(--text-primary);margin:0 0 18px;line-height:1.45;white-space:pre-line;}
+.dialogo-mensaje{font-size:var(--font-size-base);font-weight:500;color:var(--text-primary);margin:0 0 18px;line-height:1.45;white-space:pre-line;}
 .dialogo-btns{display:flex;justify-content:flex-end;gap:18px;}
 .dialogo-btns button{border:none;background:none;font-weight:bold;font-size:var(--font-size-sm);color:var(--accent);cursor:pointer;padding:6px 2px;}
 .dialogo-btns button.dialogo-destructivo{color:#ef4444;}
@@ -565,11 +565,13 @@ function abrirConfig(){document.getElementById('modal-config').classList.add('ac
 
 function toggleDarkMode(on){
   document.getElementById('appFrame').setAttribute('data-theme',on?'dark':'');
+  document.documentElement.setAttribute('data-theme',on?'dark':'');
   localStorage.setItem('bip_dark',on?'1':'0');
 }
 
 function setFont(size){
   document.getElementById('appFrame').setAttribute('data-font',size);
+  document.documentElement.setAttribute('data-font',size);
   localStorage.setItem('bip_font',size);
   ['small','normal','large'].forEach(s=>{
     document.getElementById('font-'+s).classList.toggle('active',s===size);
@@ -579,7 +581,11 @@ function setFont(size){
 function cargarPreferencias(){
   const dark=localStorage.getItem('bip_dark')==='1';
   const font=localStorage.getItem('bip_font')||'normal';
-  if(dark){document.getElementById('appFrame').setAttribute('data-theme','dark');document.getElementById('toggleDark').checked=true;}
+  if(dark){
+    document.getElementById('appFrame').setAttribute('data-theme','dark');
+    document.documentElement.setAttribute('data-theme','dark');
+    document.getElementById('toggleDark').checked=true;
+  }
   setFont(font);
 }
 
