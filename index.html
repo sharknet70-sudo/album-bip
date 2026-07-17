@@ -172,8 +172,8 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .flip-btn button.active{background:var(--accent);color:white;border-color:var(--accent);}
 
 /* ── DETALLE ───────────────────────────────────────────────────────────── */
-.det-img-wrap{width:100%;aspect-ratio:85/54;border-radius:8px;overflow:hidden;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:var(--font-size-sm);margin-bottom:8px;}
-.det-img-wrap img{width:calc(100% + 4px);height:calc(100% + 4px);margin:-1px -1px -3px -1px;object-fit:cover;object-position:center bottom;display:block;}
+.det-img-wrap{width:100%;aspect-ratio:85/54;border-radius:8px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:var(--font-size-sm);margin-bottom:8px;}
+.det-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
 .det-row{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
 .det-label{font-size:var(--font-size-xs);color:var(--text-tertiary);min-width:80px;font-weight:bold;padding-top:1px;}
 .det-val{font-size:var(--font-size-base);color:var(--text-primary);flex:1;line-height:1.4;}
@@ -305,9 +305,9 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
     </div>
   </div>
   <div class="banner-respaldo" id="bannerRespaldo">
-    <span>💾 Hace tiempo que no exportas tu respaldo.</span>
+    <span>💾 Hace tiempo que no haces una copia de seguridad.</span>
     <div class="banner-respaldo-btns">
-      <button onclick="exportarColeccion()">Exportar ahora</button>
+      <button onclick="exportarColeccion()">Copia de seguridad ahora</button>
       <button onclick="posponerBannerRespaldo()">Más tarde</button>
     </div>
   </div>

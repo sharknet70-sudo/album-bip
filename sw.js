@@ -1,5 +1,5 @@
 // ── VERSIÓN DEL CACHÉ — cambia este número cada vez que actualices la app ──
-const CACHE_NAME = 'album-bip-v7';
+const CACHE_NAME = 'album-bip-v8';
 
 const ARCHIVOS = [
   './',
