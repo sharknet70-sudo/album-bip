@@ -269,7 +269,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .sheet-cancelar{width:100%;padding:12px;background:none;border:none;font-size:13px;color:var(--text-secondary);cursor:pointer;margin-top:4px;text-align:center;}
 
 /* ── ROTACIÓN ──────────────────────────────────────────────────────────── */
-.crop-rotate-layer{position:absolute;inset:0;overflow:hidden;transform-origin:50% 50%;}
+.crop-rotate-layer{position:absolute;inset:0;transform-origin:50% 50%;}
 .crop-rotate-layer img{position:absolute;transform-origin:0 0;will-change:transform;image-rendering:high-quality;}
 .rotate-controls{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
 .rotate-controls label{font-size:var(--font-size-xs);color:var(--text-secondary);white-space:nowrap;min-width:44px;}
@@ -281,6 +281,14 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .badge-repetida{position:absolute;bottom:5px;left:6px;background:rgba(245,158,11,0.9);color:white;font-size:10px;font-weight:bold;border-radius:10px;padding:2px 7px;}
 .stepper-repetida{display:flex;align-items:center;justify-content:center;gap:16px;margin:24px 0;}
 .stepper-repetida input{width:70px;text-align:center;font-size:26px;font-weight:bold;border:1px solid var(--border2);border-radius:8px;padding:6px;background:var(--bg-card);color:var(--text-primary);}
+
+/* ── BANNER RESPALDO ───────────────────────────────────────────────────── */
+.banner-respaldo{display:none;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(180,83,9,0.15);border:1px solid #b45309;border-radius:10px;padding:8px 10px;margin:0 14px 10px;font-size:var(--font-size-xs);color:var(--text-primary);}
+.banner-respaldo.activo{display:flex;}
+.banner-respaldo-btns{display:flex;gap:6px;}
+.banner-respaldo-btns button{border:none;border-radius:6px;padding:6px 10px;font-size:var(--font-size-xs);font-weight:bold;cursor:pointer;}
+.banner-respaldo-btns button:first-child{background:#b45309;color:white;}
+.banner-respaldo-btns button:last-child{background:transparent;color:var(--text-secondary);}
 </style>
 </head>
 <body>
@@ -294,6 +302,13 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
     <div class="progreso-card">
       <div class="progreso-texto"><span>Progreso de Colección</span><span id="txt-progreso">0 de 0 (0%)</span></div>
       <div class="barra-gris"><div class="barra-verde" id="barra-progreso"></div></div>
+    </div>
+  </div>
+  <div class="banner-respaldo" id="bannerRespaldo">
+    <span>💾 Hace tiempo que no exportas tu respaldo.</span>
+    <div class="banner-respaldo-btns">
+      <button onclick="exportarColeccion()">Exportar ahora</button>
+      <button onclick="posponerBannerRespaldo()">Más tarde</button>
     </div>
   </div>
   <div class="tabs">
@@ -920,11 +935,12 @@ function applyTransform(suffix,wrapId){
   const wrap=document.getElementById(wrapId);
   const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
   const sw=cs.nativeW*cs.scale,sh=cs.nativeH*cs.scale;
-  const rotActiva=Math.abs((cs.rotBase||0)+(cs.rotFine||0))>0.01;
-  if(!rotActiva){
-    // solo se puede acotar el arrastre matemáticamente cuando no hay rotación
-    cs.ox=Math.min(0,Math.max(cs.ox,ww-sw));cs.oy=Math.min(0,Math.max(cs.oy,wh-sh));
-  }
+  const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
+  const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
+  const reqW=ww*c+wh*s,reqH=ww*s+wh*c;
+  const cx=ww/2,cy=wh/2;
+  cs.ox=Math.min(cx-reqW/2,Math.max(cs.ox,cx+reqW/2-sw));
+  cs.oy=Math.min(cy-reqH/2,Math.max(cs.oy,cy+reqH/2-sh));
   img.style.width=sw+'px';img.style.height=sh+'px';img.style.left=cs.ox+'px';img.style.top=cs.oy+'px';
   const rotLayer=document.getElementById(CROP_MAP[suffix].rotLayerId);
   if(rotLayer)rotLayer.style.transform=`rotate(${(cs.rotBase||0)+(cs.rotFine||0)}deg)`;
@@ -969,6 +985,7 @@ function doCrop(wrapId,cs){
     const ni=new Image();
     ni.onload=()=>{
       ctx.clearRect(0,0,850,540);
+      ctx.fillStyle='#0b1220';ctx.fillRect(0,0,850,540);
       ctx.save();
       ctx.translate(425,270);
       ctx.rotate(rad);
@@ -1257,8 +1274,9 @@ function abrirEstadisticas(){
 }
 
 // ── EXPORTAR / IMPORTAR ───────────────────────────────────────────────────────
-function exportarColeccion(){
-  const datos=JSON.stringify(catalogo,null,2);
+async function exportarColeccion(){
+  const fotos=await dbGetAll('fotos');
+  const datos=JSON.stringify({version:2,catalogo,fotos},null,2);
   const blob=new Blob([datos],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -1266,6 +1284,8 @@ function exportarColeccion(){
   a.href=url;a.download=`album-bip-respaldo-${fecha}.json`;
   document.body.appendChild(a);a.click();
   document.body.removeChild(a);URL.revokeObjectURL(url);
+  try{localStorage.setItem('ULTIMO_EXPORT',Date.now().toString());}catch(e){}
+  ocultarBannerRespaldo();
 }
 
 function importarColeccion(input){
@@ -1273,10 +1293,19 @@ function importarColeccion(input){
   const r=new FileReader();
   r.onload=async e=>{
     try{
-      const datos=JSON.parse(e.target.result);
-      if(!Array.isArray(datos))throw new Error('Formato inválido');
-      if(confirm(`¿Importar ${datos.length} tarjetas? Esto reemplazará tu colección actual.`)){
-        catalogo=datos;await guardarCatalogo();renderizar();
+      const raw=JSON.parse(e.target.result);
+      let datosCatalogo,datosFotos=[];
+      if(Array.isArray(raw)){datosCatalogo=raw;} // respaldo antiguo, sin fotos físicas
+      else if(raw&&Array.isArray(raw.catalogo)){datosCatalogo=raw.catalogo;datosFotos=Array.isArray(raw.fotos)?raw.fotos:[];}
+      else throw new Error('Formato inválido');
+      const msgFotos=datosFotos.length?` y ${datosFotos.length} set(s) de fotos físicas`:'';
+      if(confirm(`¿Importar ${datosCatalogo.length} tarjetas${msgFotos}? Esto reemplazará tu colección actual.`)){
+        catalogo=datosCatalogo;await guardarCatalogo();
+        if(datosFotos.length){
+          await dbClearStore('fotos');
+          for(const ft of datosFotos)await dbPut('fotos',ft);
+        }
+        renderizar();
         cerrarModal('modal-config');
         alert('✅ Colección importada correctamente.');
       }
@@ -1299,6 +1328,32 @@ function cerrarModal(id){document.getElementById(id).classList.remove('activa');
 // ── INIT ──────────────────────────────────────────────────────────────────────
 resetCrop('');resetCrop('Front');resetCrop('Back');
 cargarPreferencias();
+
+// Pide almacenamiento persistente para que el navegador no borre las fotos (IndexedDB)
+// cuando hay poco espacio o la app lleva tiempo sin abrirse.
+if(navigator.storage&&navigator.storage.persist){
+  navigator.storage.persist().catch(()=>{});
+}
+
+// ── RECORDATORIO DE RESPALDO ───────────────────────────────────────────────────
+const DIAS_AVISO=14;
+function revisarBannerRespaldo(){
+  try{
+    const ultimo=parseInt(localStorage.getItem('ULTIMO_EXPORT')||'0',10);
+    const posp=parseInt(localStorage.getItem('POSPONER_EXPORT')||'0',10);
+    const dias=(Date.now()-ultimo)/86400000;
+    const diasDesdePosponer=(Date.now()-posp)/86400000;
+    if(dias>DIAS_AVISO&&diasDesdePosponer>3){
+      document.getElementById('bannerRespaldo').classList.add('activo');
+    }
+  }catch(e){}
+}
+function ocultarBannerRespaldo(){document.getElementById('bannerRespaldo').classList.remove('activo');}
+function posponerBannerRespaldo(){
+  try{localStorage.setItem('POSPONER_EXPORT',Date.now().toString());}catch(e){}
+  ocultarBannerRespaldo();
+}
+revisarBannerRespaldo();
 
 initDB().then(async()=>{
   // 1. Intentar cargar desde IndexedDB (fuente principal)
