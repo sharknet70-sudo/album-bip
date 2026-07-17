@@ -289,6 +289,16 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .banner-respaldo-btns button{border:none;border-radius:6px;padding:6px 10px;font-size:var(--font-size-xs);font-weight:bold;cursor:pointer;}
 .banner-respaldo-btns button:first-child{background:#b45309;color:white;}
 .banner-respaldo-btns button:last-child{background:transparent;color:var(--text-secondary);}
+
+/* ── DIÁLOGO PROPIO ─────────────────────────────────────────────────────── */
+.dialogo-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:600;display:none;align-items:center;justify-content:center;padding:24px;}
+.dialogo-overlay.activa{display:flex;}
+.dialogo-box{background:var(--bg-card);border-radius:14px;padding:20px;max-width:340px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,0.45);border:1px solid var(--border2);}
+.dialogo-mensaje{font-size:var(--font-size-base);color:var(--text-primary);margin:0 0 18px;line-height:1.45;white-space:pre-line;}
+.dialogo-btns{display:flex;justify-content:flex-end;gap:18px;}
+.dialogo-btns button{border:none;background:none;font-weight:bold;font-size:var(--font-size-sm);color:var(--accent);cursor:pointer;padding:6px 2px;}
+.dialogo-btns button.dialogo-destructivo{color:#ef4444;}
+.dialogo-btns button.dialogo-secundario{color:var(--text-secondary);}
 </style>
 </head>
 <body>
@@ -506,6 +516,14 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
     <button class="sheet-opcion" id="sheetImportFusionar">🔗 Fusionar (agregar sin perder lo mío)</button>
     <button class="sheet-opcion" id="sheetImportReemplazar">♻️ Reemplazar todo</button>
     <button class="sheet-cancelar" onclick="cerrarSheetImport()">Cancelar</button>
+  </div>
+</div>
+
+<!-- DIÁLOGO PROPIO (reemplaza confirm()/alert() nativos) -->
+<div class="dialogo-overlay" id="dialogoOverlay">
+  <div class="dialogo-box">
+    <p class="dialogo-mensaje" id="dialogoMensaje"></p>
+    <div class="dialogo-btns" id="dialogoBtns"></div>
   </div>
 </div>
 
@@ -747,8 +765,8 @@ async function verDetalle(id){
     c.appendChild(bDup);
     // BUG FIX: botón quitar siempre funciona correctamente
     const bQ=document.createElement('button');bQ.className='btn-accion btn-perder';bQ.textContent="↩ Quitar de Mis Tarjetas";
-    bQ.onclick=()=>{
-      if(confirm('¿Quitar esta tarjeta de tu colección? Seguirá en el catálogo.')){
+    bQ.onclick=async()=>{
+      if(await mostrarConfirm('¿Quitar esta tarjeta de tu colección? Seguirá en el catálogo.')){
         const idx=catalogo.findIndex(x=>x.id===id);
         if(idx!==-1){catalogo[idx].tengo=false;catalogo[idx].repetidas=0;guardarCatalogo();}
         cerrarModal('modal-detalle');renderizar();
@@ -774,8 +792,8 @@ async function verDetalle(id){
 
   const bE=document.createElement('button');bE.className='btn-accion btn-editar';bE.textContent='✏️ Editar Datos de Catálogo';bE.onclick=()=>activarEdicion(t);c.appendChild(bE);
   const bEl=document.createElement('button');bEl.className='btn-accion btn-eliminar';bEl.textContent='🗑 Eliminar del Catálogo';
-  bEl.onclick=()=>{
-    if(confirm(`¿Eliminar "${t.titulo}" del catálogo? Esta acción no se puede deshacer.`)){
+  bEl.onclick=async()=>{
+    if(await mostrarConfirm(`¿Eliminar "${t.titulo}" del catálogo? Esta acción no se puede deshacer.`,{destructivo:true,textoAceptar:'Eliminar'})){
       catalogo=catalogo.filter(x=>x.id!==id);
       dbDelete('fotos',id);guardarCatalogo();cerrarModal('modal-detalle');renderizar();
     }
@@ -829,6 +847,34 @@ function setLado(lado){
   document.getElementById('btnLadoB').classList.toggle('active',lado==='back');
 }
 
+// ── DIÁLOGO PROPIO (reemplaza confirm()/alert() nativos del navegador) ─────────
+function mostrarAlerta(mensaje){
+  return new Promise(resolve=>{
+    const overlay=document.getElementById('dialogoOverlay');
+    document.getElementById('dialogoMensaje').textContent=mensaje;
+    const btns=document.getElementById('dialogoBtns');btns.innerHTML='';
+    const ok=document.createElement('button');ok.textContent='Aceptar';
+    ok.onclick=()=>{overlay.classList.remove('activa');resolve();};
+    btns.appendChild(ok);
+    overlay.classList.add('activa');
+  });
+}
+function mostrarConfirm(mensaje,opciones){
+  opciones=opciones||{};
+  return new Promise(resolve=>{
+    const overlay=document.getElementById('dialogoOverlay');
+    document.getElementById('dialogoMensaje').textContent=mensaje;
+    const btns=document.getElementById('dialogoBtns');btns.innerHTML='';
+    const cancelar=document.createElement('button');cancelar.className='dialogo-secundario';cancelar.textContent=opciones.textoCancelar||'Cancelar';
+    cancelar.onclick=()=>{overlay.classList.remove('activa');resolve(false);};
+    const aceptar=document.createElement('button');aceptar.textContent=opciones.textoAceptar||'Aceptar';
+    if(opciones.destructivo)aceptar.classList.add('dialogo-destructivo');
+    aceptar.onclick=()=>{overlay.classList.remove('activa');resolve(true);};
+    btns.appendChild(cancelar);btns.appendChild(aceptar);
+    overlay.classList.add('activa');
+  });
+}
+
 // ── FORMULARIO CATÁLOGO ───────────────────────────────────────────────────────
 const CROP_MAP={'':{wrapId:'cropWrap',outerId:'cropOuter',sliderId:'zoomSlider',rotLayerId:'rotLayer',imgId:'cropImg'},
   'Front':{wrapId:'cropWrapFront',outerId:'cropOuterFront',sliderId:'zoomFront',rotLayerId:'rotLayerFront',imgId:'cropImgFront'},
@@ -867,7 +913,7 @@ document.getElementById('uploadArea').onclick=()=>abrirSelectorImagen(src=>{crop
 
 document.getElementById('btnGuardar').onclick=async()=>{
   const titulo=document.getElementById('form-titulo').value.trim();
-  if(!titulo){alert('Por favor ingresa el nombre de la tarjeta.');return;}
+  if(!titulo){await mostrarAlerta('Por favor ingresa el nombre de la tarjeta.');return;}
   const cs=cropStates[''];
   let fi=cs.originalSrc;
   if(cs.originalSrc&&cs.nativeW)fi=await doCrop('cropWrap',cs);
@@ -1320,7 +1366,7 @@ function cerrarSheetImport(){document.getElementById('sheetImportOverlay').class
 function importarColeccion(input){
   const f=input.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{
+  r.onload=async e=>{
     try{
       const raw=JSON.parse(e.target.result);
       let datosCatalogo,datosFotos=[];
@@ -1329,7 +1375,7 @@ function importarColeccion(input){
       else throw new Error('Formato inválido');
       pendingImportData={datosCatalogo,datosFotos};
       document.getElementById('sheetImportOverlay').classList.add('activa');
-    }catch{alert('❌ El archivo no es válido. Asegúrate de usar un respaldo generado por esta app.');}
+    }catch{await mostrarAlerta('❌ El archivo no es válido. Asegúrate de usar un respaldo generado por esta app.');}
     input.value='';
   };
   r.readAsText(f);
@@ -1339,14 +1385,15 @@ async function ejecutarImportReemplazar(){
   if(!pendingImportData)return;
   const {datosCatalogo,datosFotos}=pendingImportData;
   cerrarSheetImport();
-  if(!confirm(`¿Reemplazar tu colección actual por las ${datosCatalogo.length} tarjetas de este archivo? Esto borra lo que tengas ahora.`))return;
+  const ok=await mostrarConfirm(`¿Reemplazar tu colección actual por las ${datosCatalogo.length} tarjetas de este archivo? Esto borra lo que tengas ahora.`,{destructivo:true,textoAceptar:'Reemplazar'});
+  if(!ok)return;
   catalogo=datosCatalogo;await guardarCatalogo();
   if(datosFotos.length){
     await dbClearStore('fotos');
     for(const ft of datosFotos)await dbPut('fotos',ft);
   }
   renderizar();cerrarModal('modal-config');
-  alert('✅ Colección reemplazada correctamente.');
+  await mostrarAlerta('✅ Colección reemplazada correctamente.');
 }
 
 async function ejecutarImportFusionar(){
@@ -1373,7 +1420,7 @@ async function ejecutarImportFusionar(){
     }
   }
   renderizar();cerrarModal('modal-config');
-  alert(agregadas?`✅ Se agregaron ${agregadas} tarjeta(s) nueva(s). Tu colección actual no se tocó.`:'ℹ️ No había tarjetas nuevas para agregar — ya tenías todas.');
+  await mostrarAlerta(agregadas?`✅ Se agregaron ${agregadas} tarjeta(s) nueva(s). Tu colección actual no se tocó.`:'ℹ️ No había tarjetas nuevas para agregar — ya tenías todas.');
 }
 document.getElementById('sheetImportFusionar').onclick=ejecutarImportFusionar;
 document.getElementById('sheetImportReemplazar').onclick=ejecutarImportReemplazar;
