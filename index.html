@@ -911,7 +911,7 @@ function initCrop(src,suffix,wrapId,outerId,sliderId){
   img.src=src;
   function setupCrop(){
     const wrap=document.getElementById(wrapId);
-    const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
+    const ww=wrap.clientWidth,wh=wrap.clientHeight;
     if(!ww||!wh){requestAnimationFrame(setupCrop);return;}
     const cs=cropStates[suffix||''];
     cs.nativeW=img.naturalWidth;cs.nativeH=img.naturalHeight;
@@ -934,7 +934,7 @@ function applyTransform(suffix,wrapId){
   const cs=cropStates[suffix];if(!cs||!cs.nativeW)return;
   const img=document.getElementById('cropImg'+(suffix||''));
   const wrap=document.getElementById(wrapId);
-  const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
   const sw=cs.nativeW*cs.scale,sh=cs.nativeH*cs.scale;
   const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
   const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
@@ -952,7 +952,7 @@ function recalcMinScale(suffix){
   const cs=cropStates[suffix];if(!cs||!cs.nativeW)return;
   const map=CROP_MAP[suffix];
   const wrap=document.getElementById(map.wrapId);
-  const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
   cs.minScale=computeMinScale(cs,ww,wh);
   if(cs.scale<cs.minScale)cs.scale=cs.minScale;
   cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
@@ -977,7 +977,7 @@ function nivelar(suffix,val){
 
 function doCrop(wrapId,cs){
   const wrap=document.getElementById(wrapId);
-  const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
   const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
   const kx=850/ww,ky=540/wh;
   const canvas=document.getElementById('cropCanvas');canvas.width=850;canvas.height=540;
@@ -1040,7 +1040,7 @@ function setupDrag(pantallaId,getCropInfo){
       if(deltaAngle>180)deltaAngle-=360;if(deltaAngle<-180)deltaAngle+=360;
       cs.rotFine=Math.min(15,Math.max(-15,cs.pinchStartRotFine+deltaAngle));
       const map=CROP_MAP[active.suffix];
-      const wrap=document.getElementById(map.wrapId);const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
+      const wrap=document.getElementById(map.wrapId);const ww=wrap.clientWidth,wh=wrap.clientHeight;
       cs.minScale=computeMinScale(cs,ww,wh);
       let ns=Math.min(Math.max(cs.pinchStartScale*ratio,cs.minScale),cs.minScale*2.5);
       cs.ox=cs.pinchCx-(cs.pinchCx-cs.pinchStartOx)*(ns/cs.pinchStartScale);
@@ -1095,7 +1095,7 @@ function zoomInfoFromId(id){
 
 function applyZoom(info,ns){
   const cs=cropStates[info.suffix];if(!cs||!cs.nativeW)return;
-  const wrap=document.getElementById(info.wrapId);const ww=wrap.offsetWidth,wh=wrap.offsetHeight;
+  const wrap=document.getElementById(info.wrapId);const ww=wrap.clientWidth,wh=wrap.clientHeight;
   const osw=cs.nativeW*cs.scale,osh=cs.nativeH*cs.scale;
   const nsw=cs.nativeW*ns,nsh=cs.nativeH*ns;
   cs.ox=cs.ox-(nsw-osw)*(((ww/2)-cs.ox)/osw);cs.oy=cs.oy-(nsh-osh)*(((wh/2)-cs.oy)/osh);
