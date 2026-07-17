@@ -969,8 +969,8 @@ function computeMinScale(cs,ww,wh){
   const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
   const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
   const reqW=ww*c+wh*s,reqH=ww*s+wh*c;
-  // +1.5% de margen: cubre redondeos de píxeles del navegador sin notarse a simple vista
-  return Math.max(reqW/cs.nativeW,reqH/cs.nativeH)*1.015;
+  // +5% de margen: cubre redondeos de píxeles del navegador sin notarse a simple vista
+  return Math.max(reqW/cs.nativeW,reqH/cs.nativeH)*1.05;
 }
 
 function initCrop(src,suffix,wrapId,outerId,sliderId){
