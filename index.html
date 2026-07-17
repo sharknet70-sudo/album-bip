@@ -458,6 +458,8 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
       <button class="btn-datos" onclick="exportarColeccion()">📤 Exportar colección (Hacer respaldo)</button>
       <button class="btn-datos" onclick="document.getElementById('importInput').click()">📥 Importar colección (Cargar respaldo)</button>
       <input type="file" id="importInput" accept=".json" style="display:none" onchange="importarColeccion(this)">
+      <button class="btn-datos" onclick="exportarSoloCatalogo()">📚 Compartir solo el catálogo</button>
+      <p style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:4px">Genera un archivo con las tarjetas del catálogo (sin marcar cuáles tienes, sin fotos físicas), ideal para pasarle la app a otra persona.</p>
     </div>
   </div>
 
@@ -494,6 +496,16 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
     <button class="sheet-opcion" id="sheetCamara">📷 Tomar foto</button>
     <button class="sheet-opcion" id="sheetGaleria">🖼 Elegir de galería</button>
     <button class="sheet-cancelar" onclick="cerrarSheet()">Cancelar</button>
+  </div>
+</div>
+
+<!-- SELECTOR FUSIONAR / REEMPLAZAR AL IMPORTAR -->
+<div class="sheet-overlay" id="sheetImportOverlay">
+  <div class="sheet-box">
+    <div style="padding:10px 14px 2px;font-size:var(--font-size-sm);color:var(--text-secondary);text-align:center">¿Cómo quieres importar este archivo?</div>
+    <button class="sheet-opcion" id="sheetImportFusionar">🔗 Fusionar (agregar sin perder lo mío)</button>
+    <button class="sheet-opcion" id="sheetImportReemplazar">♻️ Reemplazar todo</button>
+    <button class="sheet-cancelar" onclick="cerrarSheetImport()">Cancelar</button>
   </div>
 </div>
 
@@ -1221,6 +1233,7 @@ function cerrarSheet(){document.getElementById('sheetOverlay').classList.remove(
 document.getElementById('sheetCamara').onclick=()=>{const cb=sheetCb;cerrarSheet();pickFileCamera(cb);};
 document.getElementById('sheetGaleria').onclick=()=>{const cb=sheetCb;cerrarSheet();pickFile(cb);};
 document.getElementById('sheetOverlay').addEventListener('click',e=>{if(e.target.id==='sheetOverlay')cerrarSheet();});
+document.getElementById('sheetImportOverlay').addEventListener('click',e=>{if(e.target.id==='sheetImportOverlay')cerrarSheetImport();});
 
 // ── FILE ──────────────────────────────────────────────────────────────────────
 document.getElementById('fileInput').onchange=function(e){
@@ -1289,32 +1302,81 @@ async function exportarColeccion(){
   ocultarBannerRespaldo();
 }
 
+function exportarSoloCatalogo(){
+  const soloCatalogo=catalogo.map(t=>({...t,tengo:false,numSerie:'',repetidas:0}));
+  const datos=JSON.stringify({version:2,tipo:'catalogo',catalogo:soloCatalogo,fotos:[]},null,2);
+  const blob=new Blob([datos],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const fecha=new Date().toISOString().split('T')[0];
+  a.href=url;a.download=`album-bip-catalogo-${fecha}.json`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+let pendingImportData=null;
+function cerrarSheetImport(){document.getElementById('sheetImportOverlay').classList.remove('activa');pendingImportData=null;}
+
 function importarColeccion(input){
   const f=input.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=async e=>{
+  r.onload=e=>{
     try{
       const raw=JSON.parse(e.target.result);
       let datosCatalogo,datosFotos=[];
       if(Array.isArray(raw)){datosCatalogo=raw;} // respaldo antiguo, sin fotos físicas
       else if(raw&&Array.isArray(raw.catalogo)){datosCatalogo=raw.catalogo;datosFotos=Array.isArray(raw.fotos)?raw.fotos:[];}
       else throw new Error('Formato inválido');
-      const msgFotos=datosFotos.length?` y ${datosFotos.length} set(s) de fotos físicas`:'';
-      if(confirm(`¿Importar ${datosCatalogo.length} tarjetas${msgFotos}? Esto reemplazará tu colección actual.`)){
-        catalogo=datosCatalogo;await guardarCatalogo();
-        if(datosFotos.length){
-          await dbClearStore('fotos');
-          for(const ft of datosFotos)await dbPut('fotos',ft);
-        }
-        renderizar();
-        cerrarModal('modal-config');
-        alert('✅ Colección importada correctamente.');
-      }
+      pendingImportData={datosCatalogo,datosFotos};
+      document.getElementById('sheetImportOverlay').classList.add('activa');
     }catch{alert('❌ El archivo no es válido. Asegúrate de usar un respaldo generado por esta app.');}
     input.value='';
   };
   r.readAsText(f);
 }
+
+async function ejecutarImportReemplazar(){
+  if(!pendingImportData)return;
+  const {datosCatalogo,datosFotos}=pendingImportData;
+  cerrarSheetImport();
+  if(!confirm(`¿Reemplazar tu colección actual por las ${datosCatalogo.length} tarjetas de este archivo? Esto borra lo que tengas ahora.`))return;
+  catalogo=datosCatalogo;await guardarCatalogo();
+  if(datosFotos.length){
+    await dbClearStore('fotos');
+    for(const ft of datosFotos)await dbPut('fotos',ft);
+  }
+  renderizar();cerrarModal('modal-config');
+  alert('✅ Colección reemplazada correctamente.');
+}
+
+async function ejecutarImportFusionar(){
+  if(!pendingImportData)return;
+  const {datosCatalogo,datosFotos}=pendingImportData;
+  cerrarSheetImport();
+  const mapaIdViejoNuevo={};
+  let agregadas=0;
+  for(const nueva of datosCatalogo){
+    const yaExiste=catalogo.some(t=>t.titulo===nueva.titulo&&t.fecha===nueva.fecha);
+    if(!yaExiste){
+      const idNuevo=Date.now().toString()+Math.random().toString(36).slice(2,7);
+      mapaIdViejoNuevo[nueva.id]=idNuevo;
+      catalogo.push({...nueva,id:idNuevo});
+      agregadas++;
+    }
+  }
+  await guardarCatalogo();
+  // traspasa fotos físicas solo de las tarjetas realmente nuevas
+  if(datosFotos.length){
+    for(const ft of datosFotos){
+      const idNuevo=mapaIdViejoNuevo[ft.id];
+      if(idNuevo)await dbPut('fotos',{...ft,id:idNuevo});
+    }
+  }
+  renderizar();cerrarModal('modal-config');
+  alert(agregadas?`✅ Se agregaron ${agregadas} tarjeta(s) nueva(s). Tu colección actual no se tocó.`:'ℹ️ No había tarjetas nuevas para agregar — ya tenías todas.');
+}
+document.getElementById('sheetImportFusionar').onclick=ejecutarImportFusionar;
+document.getElementById('sheetImportReemplazar').onclick=ejecutarImportReemplazar;
 
 // ── STORAGE ───────────────────────────────────────────────────────────────────
 async function guardarCatalogo(){
