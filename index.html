@@ -266,7 +266,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .sheet-box{background:var(--bg-card);width:100%;max-width:340px;border-radius:14px 14px 0 0;padding:8px;box-shadow:0 -4px 20px rgba(0,0,0,0.3);}
 .sheet-opcion{width:100%;padding:13px;background:none;border:none;border-bottom:1px solid var(--border);font-size:14px;font-weight:bold;color:var(--accent);cursor:pointer;text-align:center;}
 .sheet-opcion:last-of-type{border-bottom:none;}
-.sheet-cancelar{width:100%;padding:12px;background:none;border:none;font-size:13px;color:var(--text-secondary);cursor:pointer;margin-top:4px;text-align:center;}
+.sheet-cancelar{width:100%;padding:12px;background:none;border:none;font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary);cursor:pointer;margin-top:4px;text-align:center;}
 
 /* ── ROTACIÓN ──────────────────────────────────────────────────────────── */
 .crop-rotate-layer{position:absolute;inset:0;transform-origin:50% 50%;}
@@ -516,7 +516,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 <!-- SELECTOR FUSIONAR / REEMPLAZAR AL IMPORTAR -->
 <div class="sheet-overlay" id="sheetImportOverlay">
   <div class="sheet-box">
-    <div style="padding:10px 14px 2px;font-size:var(--font-size-sm);color:var(--text-secondary);text-align:center">¿Cómo quieres importar este archivo?</div>
+    <div style="padding:10px 14px 2px;font-size:var(--font-size-base);font-weight:500;color:var(--text-primary);text-align:center">¿Cómo quieres importar este archivo?</div>
     <button class="sheet-opcion" id="sheetImportFusionar">🔗 Fusionar (agregar sin perder lo mío)</button>
     <button class="sheet-opcion" id="sheetImportReemplazar">♻️ Reemplazar todo</button>
     <button class="sheet-cancelar" onclick="cerrarSheetImport()">Cancelar</button>
