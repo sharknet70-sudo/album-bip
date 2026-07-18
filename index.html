@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Álbum Bip!">
+<meta name="theme-color" content="#0052cc">
+<link rel="manifest" href="manifest.json">
+<title>Mi Álbum Bip!</title>
+<style>
+/* ── VARIABLES DE TEMA ─────────────────────────────────────────────────── */
+:root {
+  --bg-app: #cbd5e1;
+  --bg-frame: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --bg-input: #f1f5f9;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --accent: #0052cc;
+  --accent-light: #dbeafe;
+  --green: #22c55e;
+  --green-dark: #166534;
+  --green-bg: rgba(34,197,94,0.05);
+  --green-border: rgba(34,197,94,0.2);
+  --red: #ef4444;
+  --amber: #b45309;
+  --amber-bg: rgba(245,158,11,0.06);
+  --shadow: 0 10px 30px rgba(0,0,0,0.2);
+  --font-size-base: 12px;
+  --font-size-sm: 11px;
+  --font-size-xs: 10px;
+  --font-size-lg: 14px;
+  --font-size-xl: 15px;
+}
+[data-theme="dark"] {
+  --bg-app: #000000;
+  --bg-frame: #0a0a0a;
+  --bg-card: #141414;
+  --bg-secondary: #1a1a1a;
+  --bg-input: #1a1a1a;
+  --border: #2a2a2a;
+  --border2: #3a3a3a;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-tertiary: #666666;
+  --accent: #0a1628;
+  --accent-light: #1a2a4a;
+  --accent-outline: #3b82f6;
+  --green: #22c55e;
+  --green-dark: #4ade80;
+  --green-bg: rgba(34,197,94,0.08);
+  --green-border: rgba(34,197,94,0.25);
+  --red: #f87171;
+  --amber: #fbbf24;
+  --amber-bg: rgba(245,158,11,0.1);
+  --shadow: 0 10px 30px rgba(0,0,0,0.8);
+}
+[data-font="small"]  { --font-size-base:11px;--font-size-sm:10px;--font-size-xs:9px;--font-size-lg:12px;--font-size-xl:13px; }
+[data-font="normal"] { --font-size-base:12px;--font-size-sm:11px;--font-size-xs:10px;--font-size-lg:14px;--font-size-xl:15px; }
+[data-font="large"]  { --font-size-base:14px;--font-size-sm:13px;--font-size-xs:11px;--font-size-lg:16px;--font-size-xl:18px; }
+
+/* ── RESET ─────────────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',sans-serif;transition:background-color 0.2s,color 0.2s,border-color 0.2s;}
+html,body{height:100%;width:100%;overflow:hidden;}
+body{background:var(--bg-app);display:flex;justify-content:center;align-items:flex-start;min-height:100vh;min-height:100dvh;padding:20px;}
+
+/* ── RESPONSIVE MÓVIL ──────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  body{padding:0!important;background:var(--bg-frame);}
+  .celular-frame{
+    width:100%!important;
+    height:100vh!important;
+    height:100dvh!important;
+    min-height:unset!important;
+    border-radius:0!important;
+    border:none!important;
+    box-shadow:none!important;
+  }
+  .contenido-scroll{-webkit-overflow-scrolling:touch;}
+}
+
+/* ── FRAME ─────────────────────────────────────────────────────────────── */
+.celular-frame{width:340px;min-height:640px;background:var(--bg-frame);border-radius:24px;box-shadow:var(--shadow);border:7px solid #0f172a;overflow:hidden;display:flex;flex-direction:column;position:relative;}
+.header{background:var(--accent);color:white;padding:10px 12px;text-align:center;font-weight:bold;font-size:var(--font-size-xl);display:flex;align-items:center;justify-content:space-between;}
+.header-title{flex:1;text-align:center;}
+.btn-config{background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:2px 4px;line-height:1;}
+
+/* ── PROGRESO ──────────────────────────────────────────────────────────── */
+.progreso-container{background:var(--accent);padding:0 12px 10px;}
+.progreso-card{background:var(--bg-card);padding:8px 10px;border-radius:8px;}
+.progreso-texto{display:flex;justify-content:space-between;font-size:var(--font-size-sm);font-weight:bold;margin-bottom:4px;color:var(--text-primary);}
+.barra-gris{background:var(--border);width:100%;height:5px;border-radius:3px;overflow:hidden;}
+.barra-verde{background:var(--green);height:100%;width:0%;transition:width 0.3s;}
+
+/* ── TABS ──────────────────────────────────────────────────────────────── */
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--bg-card);border-bottom:2px solid var(--border);}
+.tab{padding:10px 4px;text-align:center;font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;}
+.tab.activo{color:var(--accent);border-bottom-color:var(--accent);}
+[data-theme="dark"] .tab.activo{color:#3b82f6;border-bottom-color:#3b82f6;}
+[data-theme="dark"] .tab{color:var(--text-secondary);}
+
+/* ── TOOLBAR ───────────────────────────────────────────────────────────── */
+.toolbar{padding:8px 10px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;}
+.search-box{display:flex;align-items:center;gap:6px;background:var(--bg-input);border-radius:8px;padding:6px 10px;border:1px solid var(--border);}
+.search-box input{flex:1;border:none;background:transparent;outline:none;font-size:var(--font-size-base);color:var(--text-primary);}
+.filter-row{display:flex;gap:6px;align-items:center;}
+.filter-row label{font-size:var(--font-size-xs);font-weight:bold;color:var(--text-secondary);white-space:nowrap;}
+.select-filtro{flex:1;padding:4px;border-radius:6px;border:1px solid var(--border2);font-size:var(--font-size-xs);outline:none;background:var(--bg-card);color:var(--text-primary);}
+
+/* ── ACORDEÓN POR AÑOS ─────────────────────────────────────────────────── */
+.acordeon-item{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;background:var(--bg-card);}
+.acordeon-cabecera{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;user-select:none;}
+.acordeon-cabecera:active{background:var(--bg-secondary);}
+.acordeon-flecha{font-size:12px;color:var(--text-secondary);transition:transform 0.2s;flex-shrink:0;}
+.acordeon-item.abierto .acordeon-flecha{transform:rotate(90deg);}
+.acordeon-icono{font-size:18px;flex-shrink:0;}
+.acordeon-nombre{flex:1;font-size:var(--font-size-base);font-weight:bold;color:var(--text-primary);}
+.acordeon-conteo{font-size:var(--font-size-xs);color:var(--text-secondary);}
+.acordeon-cuerpo{display:none;padding:10px;border-top:1px solid var(--border);}
+.acordeon-item.abierto .acordeon-cuerpo{display:block;}
+.acordeon-cuerpo .cuadricula{margin:0;}
+
+/* ── GRID ──────────────────────────────────────────────────────────────── */
+.contenido-scroll{flex:1;overflow-y:auto;padding:10px;padding-bottom:80px;}
+.cuadricula{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.tarjeta-bip{aspect-ratio:85/54;border-radius:14px;position:relative;cursor:pointer;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.12);background:transparent;}
+.tarjeta-bip.bloqueada{background:var(--border2)!important;}
+.tarjeta-bip img.bip-thumb{width:100%;height:100%;object-fit:cover;object-position:center;display:block;}
+.bip-color-bg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;}
+.bip-color-bg span{font-size:var(--font-size-xs);font-weight:bold;color:white;line-height:1.3;text-shadow:0 1px 3px rgba(0,0,0,0.3);}
+.tarjeta-bip.bloqueada .bip-color-bg span{color:var(--text-secondary);text-shadow:none;}
+.check-icono{position:absolute;top:5px;right:6px;font-size:10px;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:bold;}
+.check-icono.tengo{background:rgba(34,197,94,0.85);}
+.check-icono.no-tengo{background:rgba(100,116,139,0.55);font-size:11px;}
+.logo-bip{display:none;}
+.tarjeta-bip.bloqueada .logo-bip{color:var(--text-tertiary);text-shadow:none;}
+.empty-state{text-align:center;padding:2rem;color:var(--text-tertiary);font-size:var(--font-size-base);grid-column:span 2;}
+.empty-state div{font-size:32px;margin-bottom:8px;}
+.btn-agregar{position:absolute;bottom:20px;right:15px;width:52px;height:52px;background:#ffcc00;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:26px;font-weight:bold;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:100;color:#0f172a;}
+@media (max-width:480px){.btn-agregar{position:fixed;bottom:24px;right:20px;bottom:calc(24px + env(safe-area-inset-bottom));}}
+/* Ocultar botón + cuando cualquier pantalla secundaria está activa */
+.pantalla-secundaria.activa ~ .btn-agregar,
+.celular-frame:has(.pantalla-secundaria.activa) .btn-agregar{display:none!important;}
+
+/* ── PANTALLAS SECUNDARIAS ─────────────────────────────────────────────── */
+.pantalla-secundaria{position:absolute;top:0;left:0;width:100%;height:100%;background:var(--bg-frame);z-index:20;display:flex;flex-direction:column;transform:translateY(100%);transition:transform 0.22s ease;}
+.pantalla-secundaria.activa{transform:translateY(0);}
+.navbar-modal{background:var(--accent);color:white;padding:11px 12px;display:flex;align-items:center;gap:10px;font-size:var(--font-size-lg);font-weight:bold;flex-shrink:0;}
+.btn-volver{background:none;border:none;color:white;font-size:18px;cursor:pointer;line-height:1;}
+.cuerpo-modal{flex:1;overflow-y:auto;padding:14px;font-size:var(--font-size-base);}
+.seccion-titulo{font-weight:bold;color:var(--text-primary);margin:12px 0 5px;font-size:var(--font-size-sm);border-bottom:1px solid var(--border);padding-bottom:2px;text-transform:uppercase;letter-spacing:0.3px;}
+.caja-texto{width:100%;padding:7px;border:1px solid var(--border2);border-radius:6px;margin-bottom:8px;outline:none;font-size:var(--font-size-base);font-family:'Segoe UI',sans-serif;background:var(--bg-card);color:var(--text-primary);}
+.caja-texto:focus{border-color:var(--accent);}
+
+/* ── FLIP ──────────────────────────────────────────────────────────────── */
+.flip-container{width:100%;aspect-ratio:85/54;perspective:600px;margin-bottom:6px;cursor:pointer;}
+.flip-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform 0.5s;}
+.flip-container.flipped .flip-inner{transform:rotateY(180deg);}
+.flip-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:8px;overflow:hidden;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:var(--font-size-sm);color:var(--text-tertiary);font-weight:bold;}
+.flip-face img{width:100%;height:100%;object-fit:cover;}
+.flip-back{transform:rotateY(180deg);}
+.flip-hint{font-size:var(--font-size-xs);color:var(--text-tertiary);text-align:center;margin-bottom:8px;}
+.flip-btn{display:flex;gap:6px;margin-bottom:10px;}
+.flip-btn button{flex:1;padding:5px;border:1px solid var(--border2);border-radius:6px;font-size:var(--font-size-xs);font-weight:bold;cursor:pointer;background:var(--bg-secondary);color:var(--text-primary);}
+.flip-btn button.active{background:var(--accent);color:white;border-color:var(--accent);}
+
+/* ── DETALLE ───────────────────────────────────────────────────────────── */
+.det-img-wrap{width:100%;aspect-ratio:85/54;border-radius:14px;overflow:hidden;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:var(--font-size-sm);margin-bottom:8px;}
+.det-img-wrap img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;}
+.det-row{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
+.det-label{font-size:var(--font-size-xs);color:var(--text-tertiary);min-width:80px;font-weight:bold;padding-top:1px;}
+.det-val{font-size:var(--font-size-base);color:var(--text-primary);flex:1;line-height:1.4;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:var(--font-size-xs);font-weight:bold;color:white;}
+.bloque-fisico{background:var(--green-bg);padding:10px;border-radius:8px;border:1px solid var(--green-border);margin-top:4px;}
+.bloque-bloqueado{background:var(--amber-bg);padding:8px;border-radius:8px;text-align:center;color:var(--amber);font-size:var(--font-size-xs);margin-top:4px;}
+
+/* ── BOTONES ───────────────────────────────────────────────────────────── */
+.btn-accion{width:100%;padding:9px;border:none;border-radius:8px;font-weight:bold;font-size:var(--font-size-base);cursor:pointer;margin-top:8px;transition:opacity 0.2s;}
+.btn-accion:hover{opacity:0.88;}
+.btn-guardar{background:var(--accent);color:white;}
+.btn-conseguida{background:var(--green);color:white;}
+.btn-perder{background:var(--text-secondary);color:white;}
+.btn-eliminar{background:none;border:1px solid var(--red);color:var(--red);}
+.btn-editar{background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border2);}
+.btn-outline{background:none;border:1px solid var(--accent-outline,var(--accent));color:var(--accent-outline,var(--accent));}
+
+/* ── CROP ──────────────────────────────────────────────────────────────── */
+.upload-area{width:100%;padding:12px;border:2px dashed var(--border2);border-radius:8px;text-align:center;cursor:pointer;color:var(--accent);font-size:var(--font-size-sm);font-weight:bold;margin-bottom:6px;background:var(--bg-secondary);}
+[data-theme="dark"] .upload-area{color:#3b82f6;}
+.crop-outer{display:none;margin-bottom:8px;}
+.crop-wrap{position:relative;width:100%;aspect-ratio:85/54;overflow:hidden;border-radius:16px;border:1px solid var(--border2);cursor:grab;background:#111;touch-action:none;}
+.crop-wrap.grabbing{cursor:grabbing;}
+.crop-wrap img{position:absolute;transform-origin:0 0;will-change:transform;image-rendering:high-quality;}
+.crop-hint{font-size:var(--font-size-xs);color:var(--text-secondary);text-align:center;margin-bottom:4px;}
+.crop-controls{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.crop-controls label{font-size:var(--font-size-xs);color:var(--text-secondary);white-space:nowrap;}
+.crop-controls input[type=range]{flex:1;accent-color:var(--accent);}
+.zoom-btn{flex-shrink:0;width:30px;height:30px;border-radius:50%;border:1px solid var(--border2);background:var(--bg-secondary);color:var(--text-primary);font-size:16px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;padding:0;}
+.zoom-btn:active{background:var(--accent);color:white;border-color:var(--accent);}
+.num-serie-input input{width:100%;padding:7px;border:1px solid var(--border2);border-radius:6px;font-size:var(--font-size-base);outline:none;margin-top:4px;background:var(--bg-card);color:var(--text-primary);}
+.num-serie-input input:focus{border-color:var(--accent);}
+
+/* ── CONFIGURACIÓN ─────────────────────────────────────────────────────── */
+.config-section{margin-bottom:16px;}
+.config-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
+.config-label{font-size:var(--font-size-base);color:var(--text-primary);font-weight:500;}
+.config-desc{font-size:var(--font-size-xs);color:var(--text-secondary);margin-top:2px;}
+.toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:24px;cursor:pointer;transition:background 0.2s;}
+.toggle-slider:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:transform 0.2s;}
+.toggle-switch input:checked+.toggle-slider{background:var(--accent);}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(20px);}
+.font-btns{display:flex;gap:6px;}
+.font-btn{flex:1;padding:6px;border:1px solid var(--border2);border-radius:6px;font-size:var(--font-size-xs);font-weight:bold;cursor:pointer;background:var(--bg-secondary);color:var(--text-primary);text-align:center;}
+.font-btn.active{background:var(--accent);color:white;border-color:var(--accent);}
+
+/* ── ESTADÍSTICAS ──────────────────────────────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.stat-card{background:var(--bg-secondary);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);}
+.stat-num{font-size:28px;font-weight:bold;color:var(--accent-stat);line-height:1;}
+.stat-label{font-size:var(--font-size-xs);color:var(--text-secondary);margin-top:3px;}
+.stat-tipo-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.stat-tipo-nombre{font-size:var(--font-size-sm);color:var(--text-primary);}
+.stat-tipo-badge{font-size:var(--font-size-xs);font-weight:bold;color:white;padding:2px 8px;border-radius:20px;}
+.stat-tipo-pct{font-size:var(--font-size-xs);color:var(--text-secondary);min-width:40px;text-align:right;}
+.stat-barra-wrap{flex:1;height:5px;background:var(--border);border-radius:3px;margin:0 8px;overflow:hidden;}
+.stat-barra-fill{height:100%;border-radius:3px;}
+
+/* ── EXPORTAR/IMPORTAR ─────────────────────────────────────────────────── */
+.btn-datos{width:100%;padding:9px;border-radius:8px;font-weight:bold;font-size:var(--font-size-sm);cursor:pointer;margin-top:6px;border:1px solid var(--border2);background:var(--bg-secondary);color:var(--text-primary);text-align:left;}
+.btn-datos:hover{opacity:0.85;}
+
+/* ── ANIMACIÓN CONSEGUIDA ──────────────────────────────────────────────── */
+@keyframes popIn{0%{transform:scale(0.4);opacity:0;}60%{transform:scale(1.15);}100%{transform:scale(1);opacity:1;}}
+@keyframes fadeOut{0%{opacity:1;}100%{opacity:0;}}
+.conseguida-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.7);z-index:50;display:flex;align-items:center;justify-content:center;border-radius:inherit;}
+.conseguida-burst{display:flex;flex-direction:column;align-items:center;gap:10px;animation:popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
+.conseguida-circulo{width:90px;height:90px;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(34,197,94,0.7);}
+.conseguida-circulo span{font-size:44px;line-height:1;}
+.conseguida-texto{color:white;font-weight:bold;font-size:16px;text-shadow:0 2px 8px rgba(0,0,0,0.5);}
+
+/* ── VISOR DE IMAGEN (zoom rápido) ─────────────────────────────────────── */
+.visor-overlay{position:fixed;inset:0;background:#000;z-index:500;display:none;flex-direction:column;touch-action:none;}
+.visor-overlay.activa{display:flex;}
+.visor-top{display:flex;justify-content:flex-end;padding:14px;flex-shrink:0;}
+.visor-cerrar{background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;}
+.visor-body{flex:1;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;touch-action:none;}
+.visor-body img{position:absolute;max-width:none;max-height:none;will-change:transform;user-select:none;-webkit-user-drag:none;}
+.visor-body img.redondeada{border-radius:14px;}
+.visor-hint{text-align:center;color:rgba(255,255,255,0.55);font-size:11px;padding:10px 0 16px;flex-shrink:0;}
+.det-img-wrap{cursor:zoom-in;}
+.flip-container{position:relative;}
+.btn-lupa{position:absolute;bottom:6px;right:6px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,0.55);color:white;border:none;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;}
+
+/* ── SELECTOR CÁMARA / GALERÍA ─────────────────────────────────────────── */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:400;display:none;align-items:flex-end;justify-content:center;}
+.sheet-overlay.activa{display:flex;}
+.sheet-box{background:var(--bg-card);width:100%;max-width:340px;border-radius:14px 14px 0 0;padding:8px;box-shadow:0 -4px 20px rgba(0,0,0,0.3);}
+.sheet-opcion{width:100%;padding:13px;background:none;border:none;border-bottom:1px solid var(--border);font-size:14px;font-weight:bold;color:var(--accent);cursor:pointer;text-align:center;}
+.sheet-opcion:last-of-type{border-bottom:none;}
+.sheet-cancelar{width:100%;padding:12px;background:none;border:none;font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary);cursor:pointer;margin-top:4px;text-align:center;}
+
+/* ── ROTACIÓN ──────────────────────────────────────────────────────────── */
+.crop-rotate-layer{position:absolute;inset:0;transform-origin:50% 50%;}
+.crop-rotate-layer img{position:absolute;transform-origin:0 0;will-change:transform;image-rendering:high-quality;}
+.rotate-controls{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.rotate-controls label{font-size:var(--font-size-xs);color:var(--text-secondary);white-space:nowrap;min-width:44px;}
+.rotate-controls input[type=range]{flex:1;accent-color:var(--accent);}
+.rot-btn{flex:1;padding:6px 4px;border-radius:6px;border:1px solid var(--border2);background:var(--bg-secondary);color:var(--text-primary);font-size:var(--font-size-xs);font-weight:bold;cursor:pointer;}
+.rot-btn:active{background:var(--accent);color:white;border-color:var(--accent);}
+
+/* ── REPETIDAS ─────────────────────────────────────────────────────────── */
+.badge-repetida{position:absolute;top:5px;right:6px;background:rgba(245,158,11,0.9);color:white;font-size:13px;font-weight:bold;border-radius:12px;padding:3px 8px;}
+.stepper-repetida{display:flex;align-items:center;justify-content:center;gap:16px;margin:24px 0;}
+.stepper-repetida input{width:70px;text-align:center;font-size:26px;font-weight:bold;border:1px solid var(--border2);border-radius:8px;padding:6px;background:var(--bg-card);color:var(--text-primary);}
+
+/* ── BANNER RESPALDO ───────────────────────────────────────────────────── */
+.banner-respaldo{display:none;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:rgba(180,83,9,0.15);border:1px solid #b45309;border-radius:10px;padding:8px 10px;margin:0 14px 10px;font-size:var(--font-size-xs);color:var(--text-primary);}
+.banner-respaldo.activo{display:flex;}
+.banner-respaldo-btns{display:flex;gap:6px;}
+.banner-respaldo-btns button{border:none;border-radius:6px;padding:6px 10px;font-size:var(--font-size-xs);font-weight:bold;cursor:pointer;}
+.banner-respaldo-btns button:first-child{background:#b45309;color:white;}
+.banner-respaldo-btns button:last-child{background:transparent;color:var(--text-secondary);}
+
+/* ── DIÁLOGO PROPIO ─────────────────────────────────────────────────────── */
+.dialogo-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:600;display:none;align-items:center;justify-content:center;padding:24px;}
+.dialogo-overlay.activa{display:flex;}
+.dialogo-box{background:var(--bg-card);border-radius:14px;padding:20px;max-width:340px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,0.45);border:1px solid var(--border2);}
+.dialogo-mensaje{font-size:var(--font-size-base);font-weight:500;color:var(--text-primary);margin:0 0 18px;line-height:1.45;white-space:pre-line;}
+.dialogo-btns{display:flex;justify-content:flex-end;gap:18px;}
+.dialogo-btns button{border:none;background:none;font-weight:bold;font-size:var(--font-size-sm);color:var(--accent);cursor:pointer;padding:6px 2px;}
+.dialogo-btns button.dialogo-destructivo{color:#ef4444;}
+.dialogo-btns button.dialogo-secundario{color:var(--text-secondary);}
+[data-theme="dark"] .sheet-opcion{color:#3b82f6;}
+[data-theme="dark"] .dialogo-btns button{color:#3b82f6;}
+[data-theme="dark"] .dialogo-btns button.dialogo-destructivo{color:#ef4444;}
+[data-theme="dark"] .dialogo-btns button.dialogo-secundario{color:var(--text-secondary);}
+</style>
+</head>
+<body>
+<div class="celular-frame" id="appFrame">
+  <div class="header">
+    <button class="btn-config" onclick="abrirEstadisticas()" title="Estadísticas">📊</button>
+    <span class="header-title">Mi Álbum Bip!</span>
+    <button class="btn-config" onclick="abrirConfig()" title="Configuración">⚙️</button>
+  </div>
+  <div class="progreso-container">
+    <div class="progreso-card">
+      <div class="progreso-texto"><span>Progreso de Colección</span><span id="txt-progreso">0 de 0 (0%)</span></div>
+      <div class="barra-gris"><div class="barra-verde" id="barra-progreso"></div></div>
+    </div>
+  </div>
+  <div class="banner-respaldo" id="bannerRespaldo">
+    <span>💾 Hace tiempo que no haces una copia de seguridad.</span>
+    <div class="banner-respaldo-btns">
+      <button onclick="exportarColeccion()">Copia de seguridad ahora</button>
+      <button onclick="posponerBannerRespaldo()">Más tarde</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab activo" id="tab-catalogo" onclick="setTab('catalogo')">📋 Catálogo</div>
+    <div class="tab" id="tab-coleccion" onclick="setTab('coleccion')">⭐ Mi Colección</div>
+    <div class="tab" id="tab-conseguir" onclick="setTab('conseguir')">🎯 Por Conseguir</div>
+    <div class="tab" id="tab-repetidas" onclick="setTab('repetidas')">🔁 Repetidas</div>
+  </div>
+  <div class="toolbar">
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Buscar tarjeta..." oninput="renderizar()">
+    </div>
+    <div class="filter-row">
+      <label>Orden:</label>
+      <select class="select-filtro" id="filtro-orden" onchange="renderizar()">
+        <option value="fecha_asc">Fecha (antiguo)</option>
+        <option value="fecha_desc">Fecha (reciente)</option>
+        <option value="nombre_asc">Nombre A-Z</option>
+        <option value="nombre_desc">Nombre Z-A</option>
+        <option value="anios_carpetas">Año</option>
+      </select>
+      <label>Tipo:</label>
+      <select class="select-filtro" id="filtro-tipo" onchange="renderizar()">
+        <option value="Todos">Todos</option>
+        <option value="Evento">Eventos</option>
+        <option value="Personaje">Personajes</option>
+        <option value="Marca">Marcas</option>
+      </select>
+    </div>
+  </div>
+  <div class="contenido-scroll">
+    <div class="cuadricula" id="contenedor-grid"></div>
+    <div id="contenedor-acordeon" style="display:none"></div>
+  </div>
+  <button class="btn-agregar" id="btnAgregar">+</button>
+
+  <!-- DETALLE -->
+  <div class="pantalla-secundaria" id="modal-detalle">
+    <div class="navbar-modal" id="nav-detalle-bg">
+      <button class="btn-volver" onclick="cerrarModal('modal-detalle')">←</button>
+      <span id="det-titulo" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Detalle</span>
+    </div>
+    <div class="cuerpo-modal" id="cuerpo-detalle"></div>
+  </div>
+
+  <!-- FORMULARIO CATÁLOGO -->
+  <div class="pantalla-secundaria" id="modal-formulario">
+    <div class="navbar-modal">
+      <button class="btn-volver" onclick="cerrarModal('modal-formulario')">←</button>
+      <span id="form-titulo-nav">Nueva Tarjeta</span>
+    </div>
+    <div class="cuerpo-modal">
+      <p class="seccion-titulo">Datos</p>
+      <input type="text" class="caja-texto" id="form-titulo" placeholder="Nombre (Ej: Bip! McDonald's)">
+      <label style="font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary);display:block;margin-bottom:4px">Fecha de lanzamiento:</label>
+      <input type="date" class="caja-texto" id="form-fecha">
+      <p class="seccion-titulo">Clasificación</p>
+      <select class="caja-texto" id="form-tipo">
+        <option value="Evento">Evento / Conmemoración</option>
+        <option value="Personaje">Personaje</option>
+        <option value="Marca">Marca</option>
+      </select>
+      <p class="seccion-titulo">Descripción</p>
+      <textarea class="caja-texto" id="form-desc" rows="3" placeholder="Descripción de la edición..."></textarea>
+      <p class="seccion-titulo">Imagen del Catálogo</p>
+      <div class="upload-area" id="uploadArea">📂 Subir foto desde tu dispositivo</div>
+      <div class="crop-outer" id="cropOuter">
+        <div class="crop-wrap" id="cropWrap"><div class="crop-rotate-layer" id="rotLayer"><img id="cropImg" src="" alt=""></div></div>
+        <p class="crop-hint">Arrastra para reencuadrar</p>
+        <div class="crop-controls"><label>Zoom</label><button type="button" class="zoom-btn" data-target="zoomSlider" data-dir="-">−</button><input type="range" id="zoomSlider" min="100" max="250" step="0.1" value="100"><button type="button" class="zoom-btn" data-target="zoomSlider" data-dir="+">+</button></div>
+        <div class="rotate-controls"><label>Girar</label><button type="button" class="rot-btn" data-suffix="" data-dir="-90">⟲ 90°</button><button type="button" class="rot-btn" data-suffix="" data-dir="90">⟳ 90°</button></div>
+        <div class="rotate-controls"><label>Nivelar</label><input type="range" class="level-slider" data-suffix="" min="-15" max="15" step="0.5" value="0"></div>
+      </div>
+      <button class="btn-accion btn-guardar" id="btnGuardar">Guardar en Catálogo</button>
+    </div>
+  </div>
+
+  <!-- FORMULARIO FÍSICA -->
+  <div class="pantalla-secundaria" id="modal-fisica">
+    <div class="navbar-modal" style="background:var(--green-dark)">
+      <button class="btn-volver" onclick="cerrarModal('modal-fisica')">←</button>
+      <span>Mi Tarjeta Física</span>
+    </div>
+    <div class="cuerpo-modal">
+      <p class="seccion-titulo">Número de Serie</p>
+      <div class="num-serie-input"><input type="text" id="fisica-serie" placeholder="Ej: 94830192" maxlength="20"></div>
+      <p class="seccion-titulo">📸 Frente de la Tarjeta</p>
+      <div class="upload-area" id="uploadFront">📂 Subir foto del frente</div>
+      <div class="crop-outer" id="cropOuterFront">
+        <div class="crop-wrap" id="cropWrapFront"><div class="crop-rotate-layer" id="rotLayerFront"><img id="cropImgFront" src="" alt=""></div></div>
+        <p class="crop-hint">Arrastra para reencuadrar</p>
+        <div class="crop-controls"><label>Zoom</label><button type="button" class="zoom-btn" data-target="zoomFront" data-dir="-">−</button><input type="range" id="zoomFront" min="100" max="250" step="0.1" value="100"><button type="button" class="zoom-btn" data-target="zoomFront" data-dir="+">+</button></div>
+        <div class="rotate-controls"><label>Girar</label><button type="button" class="rot-btn" data-suffix="Front" data-dir="-90">⟲ 90°</button><button type="button" class="rot-btn" data-suffix="Front" data-dir="90">⟳ 90°</button></div>
+        <div class="rotate-controls"><label>Nivelar</label><input type="range" class="level-slider" data-suffix="Front" min="-15" max="15" step="0.5" value="0"></div>
+      </div>
+      <p class="seccion-titulo">📸 Reverso de la Tarjeta</p>
+      <div class="upload-area" id="uploadBack">📂 Subir foto del reverso</div>
+      <div class="crop-outer" id="cropOuterBack">
+        <div class="crop-wrap" id="cropWrapBack"><div class="crop-rotate-layer" id="rotLayerBack"><img id="cropImgBack" src="" alt=""></div></div>
+        <p class="crop-hint">Arrastra para reencuadrar</p>
+        <div class="crop-controls"><label>Zoom</label><button type="button" class="zoom-btn" data-target="zoomBack" data-dir="-">−</button><input type="range" id="zoomBack" min="100" max="250" step="0.1" value="100"><button type="button" class="zoom-btn" data-target="zoomBack" data-dir="+">+</button></div>
+        <div class="rotate-controls"><label>Girar</label><button type="button" class="rot-btn" data-suffix="Back" data-dir="-90">⟲ 90°</button><button type="button" class="rot-btn" data-suffix="Back" data-dir="90">⟳ 90°</button></div>
+        <div class="rotate-controls"><label>Nivelar</label><input type="range" class="level-slider" data-suffix="Back" min="-15" max="15" step="0.5" value="0"></div>
+      </div>
+      <button class="btn-accion btn-guardar" id="btnGuardarFisica">💾 Guardar Tarjeta Física</button>
+    </div>
+  </div>
+
+  <!-- CONFIGURACIÓN -->
+  <div class="pantalla-secundaria" id="modal-config">
+    <div class="navbar-modal">
+      <button class="btn-volver" onclick="cerrarModal('modal-config')">←</button>
+      <span>Configuración</span>
+    </div>
+    <div class="cuerpo-modal">
+      <p class="seccion-titulo">Apariencia</p>
+      <div class="config-row">
+        <div>
+          <div class="config-label">🌙 Modo Oscuro</div>
+          <div class="config-desc">Cambia a tema oscuro</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggleDark" onchange="toggleDarkMode(this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="config-row">
+        <div style="flex:1">
+          <div class="config-label">🔤 Tamaño de Fuente</div>
+          <div class="config-desc">Para mayor legibilidad</div>
+          <div class="font-btns" style="margin-top:8px">
+            <button class="font-btn" id="font-small" onclick="setFont('small')">Pequeña</button>
+            <button class="font-btn active" id="font-normal" onclick="setFont('normal')">Normal</button>
+            <button class="font-btn" id="font-large" onclick="setFont('large')">Grande</button>
+          </div>
+        </div>
+      </div>
+      <p class="seccion-titulo" style="margin-top:16px">Acerca de</p>
+      <div class="config-row">
+        <div>
+          <div class="config-label">Mi Álbum Bip!</div>
+          <div class="config-desc">Versión 2.0 — Datos guardados localmente en tu dispositivo</div>
+        </div>
+      </div>
+      <p class="seccion-titulo" style="margin-top:16px">Mis Datos</p>
+      <button class="btn-datos" onclick="exportarColeccion()">📤 Exportar colección (Hacer respaldo)</button>
+      <button class="btn-datos" onclick="document.getElementById('importInput').click()">📥 Importar colección (Cargar respaldo)</button>
+      <input type="file" id="importInput" accept=".json" style="display:none" onchange="importarColeccion(this)">
+      <button class="btn-datos" onclick="exportarSoloCatalogo()">📚 Compartir solo el catálogo</button>
+      <p style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:4px">Genera un archivo con las tarjetas del catálogo (sin marcar cuáles tienes, sin fotos físicas), ideal para pasarle la app a otra persona.</p>
+    </div>
+  </div>
+
+  <!-- ESTADÍSTICAS -->
+  <div class="pantalla-secundaria" id="modal-estadisticas">
+    <div class="navbar-modal">
+      <button class="btn-volver" onclick="cerrarModal('modal-estadisticas')">←</button>
+      <span>Estadísticas</span>
+    </div>
+    <div class="cuerpo-modal" id="cuerpo-estadisticas"></div>
+  </div>
+
+  <!-- REPETIDA -->
+  <div class="pantalla-secundaria" id="modal-repetida">
+    <div class="navbar-modal" style="background:#b45309">
+      <button class="btn-volver" onclick="cerrarModal('modal-repetida')">←</button>
+      <span>Tarjeta Repetida</span>
+    </div>
+    <div class="cuerpo-modal" id="cuerpo-repetida"></div>
+  </div>
+
+</div>
+
+<!-- VISOR DE IMAGEN (zoom rápido) -->
+<div class="visor-overlay" id="visorOverlay">
+  <div class="visor-top"><button class="visor-cerrar" onclick="cerrarVisor()">✕</button></div>
+  <div class="visor-body" id="visorBody"><img id="visorImg" src="" alt=""></div>
+  <div class="visor-hint">Pellizca o arrastra para hacer zoom</div>
+</div>
+
+<!-- SELECTOR CÁMARA / GALERÍA -->
+<div class="sheet-overlay" id="sheetOverlay">
+  <div class="sheet-box">
+    <button class="sheet-opcion" id="sheetCamara">📷 Tomar foto</button>
+    <button class="sheet-opcion" id="sheetGaleria">🖼 Elegir de galería</button>
+    <button class="sheet-cancelar" onclick="cerrarSheet()">Cancelar</button>
+  </div>
+</div>
+
+<!-- SELECTOR FUSIONAR / REEMPLAZAR AL IMPORTAR -->
+<div class="sheet-overlay" id="sheetImportOverlay">
+  <div class="sheet-box">
+    <div style="padding:10px 14px 2px;font-size:var(--font-size-base);font-weight:500;color:var(--text-primary);text-align:center">¿Cómo quieres importar este archivo?</div>
+    <button class="sheet-opcion" id="sheetImportFusionar">🔗 Fusionar (agregar sin perder lo mío)</button>
+    <button class="sheet-opcion" id="sheetImportReemplazar">♻️ Reemplazar todo</button>
+    <button class="sheet-cancelar" onclick="cerrarSheetImport()">Cancelar</button>
+  </div>
+</div>
+
+<!-- DIÁLOGO PROPIO (reemplaza confirm()/alert() nativos) -->
+<div class="dialogo-overlay" id="dialogoOverlay">
+  <div class="dialogo-box">
+    <p class="dialogo-mensaje" id="dialogoMensaje"></p>
+    <div class="dialogo-btns" id="dialogoBtns"></div>
+  </div>
+</div>
+
+<div class="dialogo-overlay" id="trimOverlay">
+  <div class="dialogo-box" style="max-width:400px;">
+    <p class="dialogo-mensaje" id="trimMensaje" style="margin-bottom:10px;">Detectamos un margen alrededor de la tarjeta. ¿Usamos la imagen recortada?</p>
+    <img id="trimPreviewImg" src="" alt="" style="width:100%;border-radius:8px;display:block;margin-bottom:14px;background:#000;">
+    <div class="dialogo-btns" style="display:flex;flex-direction:column;gap:8px;">
+      <button type="button" class="btn-accion btn-guardar" id="trimUseTrimmed" style="width:100%;">✂️ Usar esta imagen (recortada)</button>
+      <button type="button" class="btn-datos" id="trimUseOriginal" style="width:100%;">Usar imagen original</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" style="display:none">
+<input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display:none">
+<canvas id="cropCanvas" style="display:none"></canvas>
+
+<script>
+// ── DB ────────────────────────────────────────────────────────────────────────
+let DB;
+function initDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open('BipAlbum',2);
+    req.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains('tarjetas'))db.createObjectStore('tarjetas',{keyPath:'id'});
+      if(!db.objectStoreNames.contains('fotos'))db.createObjectStore('fotos',{keyPath:'id'});
+    };
+    req.onsuccess=e=>{DB=e.target.result;res();};
+    req.onerror=()=>rej();
+  });
+}
+function dbPut(store,obj){return new Promise(res=>{const tx=DB.transaction(store,'readwrite');tx.objectStore(store).put(obj).onsuccess=()=>res();});}
+function dbDelete(store,id){return new Promise(res=>{const tx=DB.transaction(store,'readwrite');tx.objectStore(store).delete(id).onsuccess=()=>res();});}
+function dbGet(store,id){return new Promise(res=>{const tx=DB.transaction(store,'readonly');tx.objectStore(store).get(id).onsuccess=e=>res(e.target.result);});}
+function dbGetAll(store){return new Promise(res=>{const tx=DB.transaction(store,'readonly');tx.objectStore(store).getAll().onsuccess=e=>res(e.target.result||[]);});}
+function dbClearStore(store){return new Promise(res=>{const tx=DB.transaction(store,'readwrite');tx.objectStore(store).clear().onsuccess=()=>res();});}
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let catalogo=[];
+let tabActual='catalogo',selId=null,editId=null,pendingFileCb=null;
+let cropStates={};
+
+function colorTipo(t){return t==='Personaje'?'#a855f7':t==='Marca'?'#6366f1':'#0052cc';}
+function fmtFecha(f){if(!f)return'Sin fecha';const p=f.split('-');return p.length<3?f:`${p[2]}/${p[1]}/${p[0]}`;}
+
+// ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
+function abrirConfig(){document.getElementById('modal-config').classList.add('activa');}
+
+function toggleDarkMode(on){
+  document.getElementById('appFrame').setAttribute('data-theme',on?'dark':'');
+  document.documentElement.setAttribute('data-theme',on?'dark':'');
+  localStorage.setItem('bip_dark',on?'1':'0');
+}
+
+function setFont(size){
+  document.getElementById('appFrame').setAttribute('data-font',size);
+  document.documentElement.setAttribute('data-font',size);
+  localStorage.setItem('bip_font',size);
+  ['small','normal','large'].forEach(s=>{
+    document.getElementById('font-'+s).classList.toggle('active',s===size);
+  });
+}
+
+function cargarPreferencias(){
+  const dark=localStorage.getItem('bip_dark')==='1';
+  const font=localStorage.getItem('bip_font')||'normal';
+  if(dark){
+    document.getElementById('appFrame').setAttribute('data-theme','dark');
+    document.documentElement.setAttribute('data-theme','dark');
+    document.getElementById('toggleDark').checked=true;
+  }
+  setFont(font);
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function setTab(t){
+  tabActual=t;
+  document.getElementById('tab-catalogo').classList.toggle('activo',t==='catalogo');
+  document.getElementById('tab-coleccion').classList.toggle('activo',t==='coleccion');
+  document.getElementById('tab-conseguir').classList.toggle('activo',t==='conseguir');
+  document.getElementById('tab-repetidas').classList.toggle('activo',t==='repetidas');
+  document.getElementById('btnAgregar').style.display=t==='catalogo'?'flex':'none';
+  renderizar();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function anioDeFecha(f){
+  if(!f)return'Sin fecha';
+  const p=f.split('-');
+  return p[0]||'Sin fecha';
+}
+function crearElTarjeta(t,modoRepetidas){
+  const el=document.createElement('div');
+  el.className='tarjeta-bip'+(t.tengo?'':' bloqueada');
+  el.onclick=modoRepetidas?()=>verRepetida(t.id):()=>verDetalle(t.id);
+  const icono=modoRepetidas?'':(t.tengo?`<div class="check-icono tengo">✔</div>`:`<div class="check-icono no-tengo">🔒</div>`);
+  const badge=modoRepetidas?`<div class="badge-repetida">×${t.repetidas}</div>`:'';
+  if(t.imgBase64){
+    el.innerHTML=`<img class="bip-thumb" src="${t.imgBase64}" alt="${t.titulo}">${icono}${badge}<div class="logo-bip">bip!</div>`;
+  } else {
+    el.style.background=t.tengo?colorTipo(t.tipo):'';
+    el.innerHTML=`<div class="bip-color-bg"><span>${t.titulo}</span></div>${icono}${badge}<div class="logo-bip">bip!</div>`;
+  }
+  return el;
+}
+
+// recuerda qué años están abiertos entre renders
+let aniosAbiertos=new Set();
+
+function toggleAnio(anio){
+  if(aniosAbiertos.has(anio))aniosAbiertos.delete(anio);else aniosAbiertos.add(anio);
+  renderizar();
+}
+
+function renderAcordeonAnios(lista,modoRepetidas){
+  const cont=document.getElementById('contenedor-acordeon');
+  cont.innerHTML='';
+  // agrupar
+  let grupos={};
+  lista.forEach(t=>{
+    const a=anioDeFecha(t.fecha);
+    (grupos[a]=grupos[a]||[]).push(t);
+  });
+  let anios=Object.keys(grupos);
+  anios.sort((a,b)=>{if(a==='Sin fecha')return 1;if(b==='Sin fecha')return -1;return b.localeCompare(a);});
+
+  if(!anios.length){
+    cont.innerHTML=`<div class="empty-state"><div>📭</div>No se encontraron tarjetas.</div>`;
+    return;
+  }
+
+  anios.forEach(anio=>{
+    const tarjetas=[...grupos[anio]].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const abierto=aniosAbiertos.has(anio);
+    const item=document.createElement('div');item.className='acordeon-item'+(abierto?' abierto':'');
+    const cab=document.createElement('div');cab.className='acordeon-cabecera';
+    cab.onclick=()=>toggleAnio(anio);
+    cab.innerHTML=`<span class="acordeon-flecha">▶</span><span class="acordeon-icono">📅</span><span class="acordeon-nombre">${anio}</span><span class="acordeon-conteo">${tarjetas.length} tarjeta${tarjetas.length===1?'':'s'}</span>`;
+    item.appendChild(cab);
+    const body=document.createElement('div');body.className='acordeon-cuerpo';
+    if(abierto){
+      const grid=document.createElement('div');grid.className='cuadricula';
+      tarjetas.forEach(t=>grid.appendChild(crearElTarjeta(t,modoRepetidas)));
+      body.appendChild(grid);
+    }
+    item.appendChild(body);
+    cont.appendChild(item);
+  });
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+async function renderizar(){
+  const q=(document.getElementById('searchInput').value||'').toLowerCase();
+  const orden=document.getElementById('filtro-orden').value;
+  const tipo=document.getElementById('filtro-tipo').value;
+  const grid=document.getElementById('contenedor-grid');
+  const acordeon=document.getElementById('contenedor-acordeon');
+  grid.innerHTML='';
+  const total=catalogo.length,obt=catalogo.filter(t=>t.tengo).length,pct=total>0?Math.round(obt/total*100):0;
+  document.getElementById('txt-progreso').textContent=`${obt} de ${total} (${pct}%)`;
+  document.getElementById('barra-progreso').style.width=pct+'%';
+  let lista=[...catalogo];
+  if(tabActual==='coleccion')lista=lista.filter(t=>t.tengo);
+  if(tabActual==='conseguir')lista=lista.filter(t=>!t.tengo);
+  if(tabActual==='repetidas')lista=lista.filter(t=>(t.repetidas||0)>0);
+  if(tipo!=='Todos')lista=lista.filter(t=>t.tipo===tipo);
+  if(q)lista=lista.filter(t=>t.titulo.toLowerCase().includes(q)||(t.descripcion||'').toLowerCase().includes(q));
+
+  const modoRepetidas=tabActual==='repetidas';
+  if(orden==='anios_carpetas'){
+    grid.style.display='none';
+    acordeon.style.display='block';
+    renderAcordeonAnios(lista,modoRepetidas);
+    return;
+  }
+  grid.style.display='grid';
+  acordeon.style.display='none';
+
+  lista.sort((a,b)=>{
+    if(orden==='fecha_asc')return new Date(a.fecha)-new Date(b.fecha);
+    if(orden==='fecha_desc')return new Date(b.fecha)-new Date(a.fecha);
+    if(orden==='nombre_asc')return a.titulo.localeCompare(b.titulo);
+    return b.titulo.localeCompare(a.titulo);
+  });
+  if(!lista.length){
+    const emptyMsg=tabActual==='coleccion'?'Aún no tienes tarjetas marcadas como conseguidas.':tabActual==='conseguir'?'🎉 ¡Tienes todas las tarjetas del catálogo!':tabActual==='repetidas'?'Aún no tienes tarjetas repetidas.':'No se encontraron tarjetas.';
+    const emptyIcon=tabActual==='coleccion'?'⭐':tabActual==='conseguir'?'🏆':tabActual==='repetidas'?'🔁':'📋';
+    grid.innerHTML=`<div class="empty-state"><div>${emptyIcon}</div>${emptyMsg}</div>`;
+    return;
+  }
+  for(const t of lista)grid.appendChild(crearElTarjeta(t,modoRepetidas));
+}
+
+// ── DETALLE ───────────────────────────────────────────────────────────────────
+async function verDetalle(id){
+  const t=catalogo.find(x=>x.id===id);selId=id;
+  const fotos=await dbGet('fotos',id)||{};
+  fotosActuales=fotos;
+  document.getElementById('nav-detalle-bg').style.background=t.tengo?colorTipo(t.tipo):'#64748b';
+  document.getElementById('det-titulo').textContent=t.titulo;
+  const c=document.getElementById('cuerpo-detalle');c.innerHTML='';
+
+  // imagen catálogo
+  const imgDiv=document.createElement('div');imgDiv.className='det-img-wrap';
+  if(t.imgBase64){
+    imgDiv.innerHTML=`<img src="${t.imgBase64}" alt="${t.titulo}">`;
+    imgDiv.onclick=()=>abrirVisor(t.imgBase64,true);
+  }
+  else{imgDiv.textContent='Sin imagen de catálogo';imgDiv.style.cursor='default';}
+  c.appendChild(imgDiv);
+
+  // info
+  const info=document.createElement('div');
+  info.innerHTML=`
+    <div class="det-row"><span class="det-label">Tipo</span><span class="det-val"><span class="badge" style="background:${colorTipo(t.tipo)}">${t.tipo}</span></span></div>
+    <div class="det-row"><span class="det-label">Lanzamiento</span><span class="det-val">${fmtFecha(t.fecha)}</span></div>
+    <div class="det-row"><span class="det-label">Descripción</span><span class="det-val">${t.descripcion||'Sin descripción.'}</span></div>`;
+  c.appendChild(info);
+
+  // física
+  const tF=document.createElement('p');tF.className='seccion-titulo';tF.textContent='Mi Tarjeta Física';c.appendChild(tF);
+
+  if(t.tengo){
+    const bloque=document.createElement('div');bloque.className='bloque-fisico';
+    bloque.innerHTML=`
+      <div style="font-weight:bold;color:var(--green-dark);margin-bottom:8px;font-size:var(--font-size-sm)">Vista de mi tarjeta física</div>
+      <div class="flip-container" id="flipCard">
+        ${(fotos.front||fotos.back)?`<button class="btn-lupa" onclick="event.stopPropagation();abrirVisorFlip()">🔍</button>`:''}
+        <div class="flip-inner">
+        <div class="flip-face">${fotos.front?`<img src="${fotos.front}">`:'Frente — sin foto'}</div>
+        <div class="flip-face flip-back">${fotos.back?`<img src="${fotos.back}">`:'Reverso — sin foto'}</div>
+      </div></div>
+      <p class="flip-hint">Toca la tarjeta para voltearla</p>
+      <div class="flip-btn">
+        <button class="active" id="btnLadoF" onclick="setLado('front')">Frente</button>
+        <button id="btnLadoB" onclick="setLado('back')">Reverso</button>
+      </div>
+      <div class="det-row"><span class="det-label">N° Serie</span><span class="det-val">${t.numSerie||'Sin registrar'}</span></div>`;
+    c.appendChild(bloque);
+    document.getElementById('flipCard').onclick=()=>{
+      const fc=document.getElementById('flipCard');fc.classList.toggle('flipped');
+      const fl=fc.classList.contains('flipped');
+      document.getElementById('btnLadoF').classList.toggle('active',!fl);
+      document.getElementById('btnLadoB').classList.toggle('active',fl);
+    };
+    const bF=document.createElement('button');bF.className='btn-accion btn-outline';bF.textContent='📷 Editar Fotos Físicas';bF.onclick=()=>abrirFisica(t);c.appendChild(bF);
+    const bDup=document.createElement('button');bDup.className='btn-accion btn-editar';
+    bDup.textContent=t.repetidas?`🔁 Agregar duplicado (tienes ${t.repetidas})`:'🔁 Agregar duplicado';
+    bDup.onclick=()=>{
+      const idx=catalogo.findIndex(x=>x.id===id);
+      if(idx!==-1){catalogo[idx].repetidas=(catalogo[idx].repetidas||0)+1;guardarCatalogo();}
+      bDup.textContent=`🔁 Agregar duplicado (tienes ${catalogo[idx].repetidas})`;
+    };
+    c.appendChild(bDup);
+    // BUG FIX: botón quitar siempre funciona correctamente
+    const bQ=document.createElement('button');bQ.className='btn-accion btn-perder';bQ.textContent="↩ Quitar de Mis Tarjetas";
+    bQ.onclick=async()=>{
+      if(await mostrarConfirm('¿Quitar esta tarjeta de tu colección? Seguirá en el catálogo.')){
+        const idx=catalogo.findIndex(x=>x.id===id);
+        if(idx!==-1){catalogo[idx].tengo=false;catalogo[idx].repetidas=0;guardarCatalogo();}
+        cerrarModal('modal-detalle');renderizar();
+      }
+    };
+    c.appendChild(bQ);
+  } else {
+    const b=document.createElement('div');b.className='bloque-bloqueado';b.textContent='No tienes esta tarjeta. Márcala como conseguida para agregar tus fotos físicas.';c.appendChild(b);
+    const bC=document.createElement('button');bC.className='btn-accion btn-conseguida';bC.textContent='✅ Marcar como Conseguida';
+    bC.onclick=()=>{
+      const idx=catalogo.findIndex(x=>x.id===id);
+      if(idx!==-1){catalogo[idx].tengo=true;guardarCatalogo();}
+      const overlay=document.createElement('div');overlay.className='conseguida-overlay';
+      overlay.innerHTML=`<div class="conseguida-burst"><div class="conseguida-circulo"><span>✔</span></div><div class="conseguida-texto">¡Tarjeta conseguida!</div></div>`;
+      document.getElementById('appFrame').appendChild(overlay);
+      setTimeout(()=>{
+        overlay.style.animation='fadeOut 0.3s ease forwards';
+        setTimeout(()=>{overlay.remove();cerrarModal('modal-detalle');renderizar();},300);
+      },1000);
+    };
+    c.appendChild(bC);
+  }
+
+  const bE=document.createElement('button');bE.className='btn-accion btn-editar';bE.textContent='✏️ Editar Datos de Catálogo';bE.onclick=()=>activarEdicion(t);c.appendChild(bE);
+  const bEl=document.createElement('button');bEl.className='btn-accion btn-eliminar';bEl.textContent='🗑 Eliminar del Catálogo';
+  bEl.onclick=async()=>{
+    if(await mostrarConfirm(`¿Eliminar "${t.titulo}" del catálogo? Esta acción no se puede deshacer.`,{destructivo:true,textoAceptar:'Eliminar'})){
+      catalogo=catalogo.filter(x=>x.id!==id);
+      dbDelete('fotos',id);guardarCatalogo();cerrarModal('modal-detalle');renderizar();
+    }
+  };
+  c.appendChild(bEl);
+  document.getElementById('modal-detalle').classList.add('activa');
+}
+
+// ── REPETIDAS ─────────────────────────────────────────────────────────────────
+function verRepetida(id){
+  const t=catalogo.find(x=>x.id===id);if(!t)return;
+  selId=id;
+  const c=document.getElementById('cuerpo-repetida');
+  const imgHtml=t.imgBase64?`<img src="${t.imgBase64}" alt="${t.titulo}">`:'Sin imagen';
+  c.innerHTML=`
+    <div class="det-img-wrap" id="repImgWrap">${imgHtml}</div>
+    <div style="text-align:center;font-weight:bold;font-size:var(--font-size-xl);margin-top:6px;color:var(--text-primary)">${t.titulo}</div>
+    <p class="seccion-titulo" style="text-align:center;border:none;margin-top:16px">Cantidad de repetidas</p>
+    <div class="stepper-repetida">
+      <button class="zoom-btn" style="width:44px;height:44px;font-size:22px" onclick="ajustarRepetida(-1)">−</button>
+      <input type="number" id="rep-cantidad" value="${t.repetidas||0}" min="0" onchange="setRepetidaCantidad(this.value)">
+      <button class="zoom-btn" style="width:44px;height:44px;font-size:22px" onclick="ajustarRepetida(1)">+</button>
+    </div>
+    <p style="text-align:center;color:var(--text-tertiary);font-size:var(--font-size-xs)">Si llega a 0, la tarjeta se quita de esta pestaña.</p>`;
+  if(t.imgBase64)document.getElementById('repImgWrap').onclick=()=>abrirVisor(t.imgBase64,true);
+  document.getElementById('modal-repetida').classList.add('activa');
+}
+
+function ajustarRepetida(delta){
+  const t=catalogo.find(x=>x.id===selId);if(!t)return;
+  setRepetidaCantidad((t.repetidas||0)+delta);
+}
+
+function setRepetidaCantidad(valor){
+  const idx=catalogo.findIndex(x=>x.id===selId);if(idx===-1)return;
+  let n=parseInt(valor,10);if(isNaN(n)||n<0)n=0;
+  catalogo[idx].repetidas=n;
+  guardarCatalogo();
+  if(n<=0){
+    cerrarModal('modal-repetida');renderizar();return;
+  }
+  const input=document.getElementById('rep-cantidad');
+  if(input)input.value=n;
+  renderizar();
+}
+
+function setLado(lado){
+  const fc=document.getElementById('flipCard');
+  if(lado==='back')fc.classList.add('flipped');else fc.classList.remove('flipped');
+  document.getElementById('btnLadoF').classList.toggle('active',lado==='front');
+  document.getElementById('btnLadoB').classList.toggle('active',lado==='back');
+}
+
+// ── DIÁLOGO PROPIO (reemplaza confirm()/alert() nativos del navegador) ─────────
+function mostrarAlerta(mensaje){
+  return new Promise(resolve=>{
+    const overlay=document.getElementById('dialogoOverlay');
+    document.getElementById('dialogoMensaje').textContent=mensaje;
+    const btns=document.getElementById('dialogoBtns');btns.innerHTML='';
+    const ok=document.createElement('button');ok.textContent='Aceptar';
+    ok.onclick=()=>{overlay.classList.remove('activa');resolve();};
+    btns.appendChild(ok);
+    overlay.classList.add('activa');
+  });
+}
+function mostrarConfirm(mensaje,opciones){
+  opciones=opciones||{};
+  return new Promise(resolve=>{
+    const overlay=document.getElementById('dialogoOverlay');
+    document.getElementById('dialogoMensaje').textContent=mensaje;
+    const btns=document.getElementById('dialogoBtns');btns.innerHTML='';
+    const cancelar=document.createElement('button');cancelar.className='dialogo-secundario';cancelar.textContent=opciones.textoCancelar||'Cancelar';
+    cancelar.onclick=()=>{overlay.classList.remove('activa');resolve(false);};
+    const aceptar=document.createElement('button');aceptar.textContent=opciones.textoAceptar||'Aceptar';
+    if(opciones.destructivo)aceptar.classList.add('dialogo-destructivo');
+    aceptar.onclick=()=>{overlay.classList.remove('activa');resolve(true);};
+    btns.appendChild(cancelar);btns.appendChild(aceptar);
+    overlay.classList.add('activa');
+  });
+}
+
+// ── FORMULARIO CATÁLOGO ───────────────────────────────────────────────────────
+const CROP_MAP={'':{wrapId:'cropWrap',outerId:'cropOuter',sliderId:'zoomSlider',rotLayerId:'rotLayer',imgId:'cropImg'},
+  'Front':{wrapId:'cropWrapFront',outerId:'cropOuterFront',sliderId:'zoomFront',rotLayerId:'rotLayerFront',imgId:'cropImgFront'},
+  'Back':{wrapId:'cropWrapBack',outerId:'cropOuterBack',sliderId:'zoomBack',rotLayerId:'rotLayerBack',imgId:'cropImgBack'}};
+
+function resetCrop(s){
+  cropStates[s]={nativeW:0,nativeH:0,ox:0,oy:0,scale:1,minScale:1,fitScale:1,rotBase:0,rotFine:0,originalSrc:'',dragging:false};
+  const q=document.querySelector(`.level-slider[data-suffix="${s}"]`);
+  if(q)q.value=0;
+}
+
+document.getElementById('btnAgregar').onclick=()=>{
+  editId=null;resetCrop('');
+  document.getElementById('form-titulo-nav').textContent='Nueva Tarjeta';
+  document.getElementById('form-titulo').value='';
+  document.getElementById('form-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('form-desc').value='';document.getElementById('form-tipo').value='Evento';
+  document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';
+  document.getElementById('cropOuter').style.display='none';
+  document.getElementById('modal-formulario').classList.add('activa');
+};
+
+function activarEdicion(t){
+  editId=t.id;resetCrop('');
+  document.getElementById('form-titulo-nav').textContent='Editar Tarjeta';
+  document.getElementById('form-titulo').value=t.titulo;
+  document.getElementById('form-fecha').value=t.fecha;
+  document.getElementById('form-tipo').value=t.tipo;
+  document.getElementById('form-desc').value=t.descripcion||'';
+  if(t.imgBase64){cropStates[''].originalSrc=t.imgBase64;document.getElementById('uploadArea').textContent='✓ Imagen cargada';setTimeout(()=>initCrop(t.imgBase64,'','cropWrap','cropOuter','zoomSlider'),60);}
+  else{document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';document.getElementById('cropOuter').style.display='none';}
+  cerrarModal('modal-detalle');document.getElementById('modal-formulario').classList.add('activa');
+}
+
+document.getElementById('uploadArea').onclick=()=>abrirSelectorImagen(src=>procesarImagenSeleccionada(src,finalSrc=>{cropStates[''].originalSrc=finalSrc;initCrop(finalSrc,'','cropWrap','cropOuter','zoomSlider');}));
+
+document.getElementById('btnGuardar').onclick=async()=>{
+  const titulo=document.getElementById('form-titulo').value.trim();
+  if(!titulo){await mostrarAlerta('Por favor ingresa el nombre de la tarjeta.');return;}
+  const cs=cropStates[''];
+  let fi=cs.originalSrc;
+  if(cs.originalSrc&&cs.nativeW){
+    if(!cubreCompleto('cropWrap',cs)){
+      const continuar=await mostrarConfirm('La imagen no cubre todo el marco todavía — van a quedar espacios en blanco en las esquinas o bordes. Acércala un poco más con el zoom antes de guardar.',{textoCancelar:'Seguir ajustando',textoAceptar:'Guardar igual',destructivo:true});
+      if(!continuar)return;
+    }
+    fi=await doCrop('cropWrap',cs);
+  }
+  const ex=editId?catalogo.find(x=>x.id===editId):null;
+  const obj={id:editId||Date.now().toString(),titulo,fecha:document.getElementById('form-fecha').value,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
+  if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
+  guardarCatalogo();cerrarModal('modal-formulario');renderizar();
+};
+
+// ── FORMULARIO FÍSICA ─────────────────────────────────────────────────────────
+async function abrirFisica(t){
+  resetCrop('Front');resetCrop('Back');
+  const fotos=await dbGet('fotos',t.id)||{};
+  document.getElementById('fisica-serie').value=t.numSerie||'';
+  ['Front','Back'].forEach(lado=>{
+    const src=lado==='Front'?fotos.front:fotos.back;
+    const ua=document.getElementById('upload'+lado);
+    const co=document.getElementById('cropOuter'+lado);
+    if(src){cropStates[lado].originalSrc=src;ua.textContent='✓ Imagen cargada';setTimeout(()=>initCrop(src,lado,'cropWrap'+lado,'cropOuter'+lado,'zoom'+lado),80);}
+    else{ua.innerHTML=`📂 Subir foto del ${lado==='Front'?'frente':'reverso'}`;co.style.display='none';}
+  });
+  cerrarModal('modal-detalle');document.getElementById('modal-fisica').classList.add('activa');
+}
+
+document.getElementById('uploadFront').onclick=()=>abrirSelectorImagen(src=>procesarImagenSeleccionada(src,finalSrc=>{cropStates['Front'].originalSrc=finalSrc;initCrop(finalSrc,'Front','cropWrapFront','cropOuterFront','zoomFront');}));
+document.getElementById('uploadBack').onclick=()=>abrirSelectorImagen(src=>procesarImagenSeleccionada(src,finalSrc=>{cropStates['Back'].originalSrc=finalSrc;initCrop(finalSrc,'Back','cropWrapBack','cropOuterBack','zoomBack');}));
+
+document.getElementById('btnGuardarFisica').onclick=async()=>{
+  const t=catalogo.find(x=>x.id===selId);
+  t.numSerie=document.getElementById('fisica-serie').value;
+  const csF=cropStates['Front'],csB=cropStates['Back'];
+  if(csF.originalSrc&&csF.nativeW&&!cubreCompleto('cropWrapFront',csF)){
+    const continuar=await mostrarConfirm('La foto del frente no cubre todo el marco todavía — van a quedar espacios en blanco. Acércala un poco más con el zoom antes de guardar.',{textoCancelar:'Seguir ajustando',textoAceptar:'Guardar igual',destructivo:true});
+    if(!continuar)return;
+  }
+  if(csB.originalSrc&&csB.nativeW&&!cubreCompleto('cropWrapBack',csB)){
+    const continuar=await mostrarConfirm('La foto del reverso no cubre todo el marco todavía — van a quedar espacios en blanco. Acércala un poco más con el zoom antes de guardar.',{textoCancelar:'Seguir ajustando',textoAceptar:'Guardar igual',destructivo:true});
+    if(!continuar)return;
+  }
+  const fotos=await dbGet('fotos',selId)||{id:selId};
+  if(csF.originalSrc&&csF.nativeW)fotos.front=await doCrop('cropWrapFront',csF);
+  else if(csF.originalSrc)fotos.front=csF.originalSrc;
+  if(csB.originalSrc&&csB.nativeW)fotos.back=await doCrop('cropWrapBack',csB);
+  else if(csB.originalSrc)fotos.back=csB.originalSrc;
+  await dbPut('fotos',fotos);
+  guardarCatalogo();cerrarModal('modal-fisica');await verDetalle(selId);
+};
+
+// ── CROP ENGINE ───────────────────────────────────────────────────────────────
+function computeMinScale(cs,ww,wh){
+  const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
+  const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
+  const reqW=ww*c+wh*s,reqH=ww*s+wh*c;
+  // +10% de margen: cubre redondeos de píxeles del navegador sin notarse a simple vista
+  return Math.max(reqW/cs.nativeW,reqH/cs.nativeH)*1.10;
+}
+// escala a la que se ve la imagen COMPLETA dentro del marco, sin recortar nada (punto de partida del zoom)
+function computeFitScale(cs,ww,wh){
+  const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
+  const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
+  const reqW=ww*c+wh*s,reqH=ww*s+wh*c;
+  return Math.min(reqW/cs.nativeW,reqH/cs.nativeH);
+}
+// true si, con el zoom/posición actual, la imagen cubre el marco completo sin dejar huecos
+function cubreCompleto(wrapId,cs){
+  const wrap=document.getElementById(wrapId);
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
+  const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
+  const reqW=ww*c+wh*s,reqH=ww*s+wh*c;
+  const sw=cs.nativeW*cs.scale,sh=cs.nativeH*cs.scale;
+  return sw>=reqW-0.5&&sh>=reqH-0.5;
+}
+
+function initCrop(src,suffix,wrapId,outerId,sliderId){
+  document.getElementById(outerId).style.display='block';
+  const img=document.getElementById('cropImg'+(suffix||''));
+  img.src=src;
+  function setupCrop(){
+    const wrap=document.getElementById(wrapId);
+    const ww=wrap.clientWidth,wh=wrap.clientHeight;
+    if(!ww||!wh){requestAnimationFrame(setupCrop);return;}
+    const cs=cropStates[suffix||''];
+    cs.nativeW=img.naturalWidth;cs.nativeH=img.naturalHeight;
+    cs.rotBase=0;cs.rotFine=0;
+    cs.minScale=computeMinScale(cs,ww,wh);
+    cs.fitScale=computeFitScale(cs,ww,wh);
+    cs.scale=cs.fitScale;
+    cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
+    const sl=document.getElementById(sliderId);
+    const minVal=Math.round(cs.fitScale*1000)/10;
+    const coverVal=Math.round(cs.minScale*1000)/10;
+    const maxVal=Math.min(Math.max(coverVal*2.5,minVal*4),250);
+    sl.min=minVal;sl.max=maxVal;sl.step=0.1;sl.value=minVal;
+    const lvl=document.querySelector(`.level-slider[data-suffix="${suffix||''}"]`);
+    if(lvl)lvl.value=0;
+    applyTransform(suffix||'',wrapId);
+  }
+  img.onload=()=>requestAnimationFrame(setupCrop);
+  if(img.complete&&img.naturalWidth)requestAnimationFrame(setupCrop);
+}
+
+function applyTransform(suffix,wrapId){
+  const cs=cropStates[suffix];if(!cs||!cs.nativeW)return;
+  const img=document.getElementById('cropImg'+(suffix||''));
+  const wrap=document.getElementById(wrapId);
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  const sw=cs.nativeW*cs.scale,sh=cs.nativeH*cs.scale;
+  const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
+  const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
+  const reqW=ww*c+wh*s,reqH=ww*s+wh*c;
+  const cx=ww/2,cy=wh/2;
+  if(sw>=reqW)cs.ox=Math.min(cx-reqW/2,Math.max(cs.ox,cx+reqW/2-sw));
+  else cs.ox=cx-sw/2;
+  if(sh>=reqH)cs.oy=Math.min(cy-reqH/2,Math.max(cs.oy,cy+reqH/2-sh));
+  else cs.oy=cy-sh/2;
+  img.style.width=sw+'px';img.style.height=sh+'px';img.style.left=cs.ox+'px';img.style.top=cs.oy+'px';
+  const rotLayer=document.getElementById(CROP_MAP[suffix].rotLayerId);
+  if(rotLayer)rotLayer.style.transform=`rotate(${(cs.rotBase||0)+(cs.rotFine||0)}deg)`;
+}
+
+// recalcula el zoom mínimo (fit) cuando cambia la rotación y reencuadra centrado
+function recalcMinScale(suffix){
+  const cs=cropStates[suffix];if(!cs||!cs.nativeW)return;
+  const map=CROP_MAP[suffix];
+  const wrap=document.getElementById(map.wrapId);
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  cs.minScale=computeMinScale(cs,ww,wh);
+  cs.fitScale=computeFitScale(cs,ww,wh);
+  if(cs.scale<cs.fitScale)cs.scale=cs.fitScale;
+  cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
+  const sl=document.getElementById(map.sliderId);
+  const minVal=Math.round(cs.fitScale*1000)/10;
+  sl.min=minVal;
+  if(parseFloat(sl.value)<minVal)sl.value=minVal;
+  applyTransform(suffix,map.wrapId);
+}
+
+function girar90(suffix,dir){
+  const cs=cropStates[suffix];if(!cs||!cs.nativeW)return;
+  cs.rotBase=(((cs.rotBase||0)+dir)%360+360)%360;
+  recalcMinScale(suffix);
+}
+
+function nivelar(suffix,val){
+  const cs=cropStates[suffix];if(!cs||!cs.nativeW)return;
+  cs.rotFine=val;
+  recalcMinScale(suffix);
+}
+
+function doCrop(wrapId,cs){
+  const wrap=document.getElementById(wrapId);
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
+  const kx=850/ww,ky=540/wh;
+  const canvas=document.getElementById('cropCanvas');canvas.width=850;canvas.height=540;
+  const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  return new Promise(resolve=>{
+    const ni=new Image();
+    ni.onload=()=>{
+      ctx.clearRect(0,0,850,540);
+      ctx.save();
+      ctx.scale(kx,ky);
+      ctx.translate(ww/2,wh/2);
+      ctx.rotate(rad);
+      ctx.translate(-ww/2,-wh/2);
+      ctx.drawImage(ni,0,0,ni.naturalWidth,ni.naturalHeight,cs.ox,cs.oy,cs.nativeW*cs.scale,cs.nativeH*cs.scale);
+      ctx.restore();
+      resolve(canvas.toDataURL('image/jpeg',0.95));
+    };
+    ni.src=cs.originalSrc;
+    if(ni.complete&&ni.naturalWidth)ni.onload();
+  });
+}
+
+function setupDrag(pantallaId,getCropInfo){
+  const panel=document.getElementById(pantallaId);let active=null;
+  panel.addEventListener('mousedown',e=>{const info=getCropInfo(e.target);if(!info)return;active=info;info.cs.dragging=true;info.cs.startX=e.clientX;info.cs.startY=e.clientY;info.cs.startOx=info.cs.ox;info.cs.startOy=info.cs.oy;document.getElementById(info.wrapId).classList.add('grabbing');e.preventDefault();});
+  panel.addEventListener('mousemove',e=>{if(!active||!active.cs.dragging)return;active.cs.ox=active.cs.startOx+(e.clientX-active.cs.startX);active.cs.oy=active.cs.startOy+(e.clientY-active.cs.startY);applyTransform(active.suffix,active.wrapId);});
+  panel.addEventListener('mouseup',()=>{if(active){active.cs.dragging=false;document.getElementById(active.wrapId)?.classList.remove('grabbing');active=null;}});
+  panel.addEventListener('touchstart',e=>{
+    const info=getCropInfo(e.target);if(!info)return;active=info;
+    const cs=info.cs;
+    if(e.touches.length===1){
+      const t=e.touches[0];
+      cs.dragging=true;cs.startX=t.clientX;cs.startY=t.clientY;cs.startOx=cs.ox;cs.startOy=cs.oy;
+    } else if(e.touches.length>=2){
+      cs.dragging=false;
+      const t0=e.touches[0],t1=e.touches[1];
+      cs.pinchStartDist=Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY);
+      cs.pinchStartAngle=Math.atan2(t1.clientY-t0.clientY,t1.clientX-t0.clientX)*180/Math.PI;
+      cs.pinchStartScale=cs.scale;
+      cs.pinchStartRotFine=cs.rotFine||0;
+      cs.pinchStartOx=cs.ox;cs.pinchStartOy=cs.oy;
+      const wrap=document.getElementById(info.wrapId);const rect=wrap.getBoundingClientRect();
+      cs.pinchCx=(t0.clientX+t1.clientX)/2-rect.left;
+      cs.pinchCy=(t0.clientY+t1.clientY)/2-rect.top;
+    }
+    e.preventDefault();
+  },{passive:false});
+  panel.addEventListener('touchmove',e=>{
+    if(!active)return;const cs=active.cs;
+    if(e.touches.length===1&&cs.dragging){
+      const t=e.touches[0];
+      cs.ox=cs.startOx+(t.clientX-cs.startX);cs.oy=cs.startOy+(t.clientY-cs.startY);
+      applyTransform(active.suffix,active.wrapId);
+    } else if(e.touches.length>=2){
+      const t0=e.touches[0],t1=e.touches[1];
+      const dist=Math.hypot(t1.clientX-t0.clientX,t1.clientY-t0.clientY);
+      const angle=Math.atan2(t1.clientY-t0.clientY,t1.clientX-t0.clientX)*180/Math.PI;
+      const ratio=dist/(cs.pinchStartDist||1);
+      let deltaAngle=angle-cs.pinchStartAngle;
+      if(deltaAngle>180)deltaAngle-=360;if(deltaAngle<-180)deltaAngle+=360;
+      cs.rotFine=Math.min(15,Math.max(-15,cs.pinchStartRotFine+deltaAngle));
+      const map=CROP_MAP[active.suffix];
+      const wrap=document.getElementById(map.wrapId);const ww=wrap.clientWidth,wh=wrap.clientHeight;
+      cs.minScale=computeMinScale(cs,ww,wh);
+      let ns=Math.min(Math.max(cs.pinchStartScale*ratio,cs.minScale),cs.minScale*2.5);
+      cs.ox=cs.pinchCx-(cs.pinchCx-cs.pinchStartOx)*(ns/cs.pinchStartScale);
+      cs.oy=cs.pinchCy-(cs.pinchCy-cs.pinchStartOy)*(ns/cs.pinchStartScale);
+      cs.scale=ns;
+      applyTransform(active.suffix,active.wrapId);
+      const sl=document.getElementById(map.sliderId);if(sl)sl.value=Math.round(cs.scale*1000)/10;
+      const lvl=document.querySelector(`.level-slider[data-suffix="${active.suffix}"]`);if(lvl)lvl.value=Math.round(cs.rotFine*10)/10;
+    }
+    e.preventDefault();
+  },{passive:false});
+  panel.addEventListener('touchend',e=>{
+    if(!active)return;const cs=active.cs;
+    if(e.touches.length===0){cs.dragging=false;active=null;}
+    else if(e.touches.length===1){
+      const t=e.touches[0];
+      cs.dragging=true;cs.startX=t.clientX;cs.startY=t.clientY;cs.startOx=cs.ox;cs.startOy=cs.oy;
+    }
+  });
+  panel.addEventListener('input',e=>{
+    if(e.target.classList.contains('level-slider')){
+      nivelar(e.target.dataset.suffix,parseFloat(e.target.value));
+      return;
+    }
+    const info=zoomInfoFromId(e.target.id);
+    if(!info)return;
+    applyZoom(info,parseFloat(e.target.value)/100);
+  });
+  panel.addEventListener('click',e=>{
+    const rotBtn=e.target.closest('.rot-btn');
+    if(rotBtn){girar90(rotBtn.dataset.suffix,parseInt(rotBtn.dataset.dir,10));return;}
+    const btn=e.target.closest('.zoom-btn');
+    if(!btn)return;
+    const info=zoomInfoFromId(btn.dataset.target);
+    if(!info)return;
+    const cs=cropStates[info.suffix];if(!cs||!cs.nativeW)return;
+    const slider=document.getElementById(btn.dataset.target);
+    const step=(parseFloat(slider.step)||0.1)/100;
+    const dir=btn.dataset.dir==='+'?1:-1;
+    const ns=Math.min(Math.max(cs.scale+dir*step,parseFloat(slider.min)/100),parseFloat(slider.max)/100);
+    slider.value=Math.round(ns*1000)/10;
+    applyZoom(info,ns);
+  });
+}
+
+function zoomInfoFromId(id){
+  if(id==='zoomSlider')return{suffix:'',wrapId:'cropWrap'};
+  if(id==='zoomFront')return{suffix:'Front',wrapId:'cropWrapFront'};
+  if(id==='zoomBack')return{suffix:'Back',wrapId:'cropWrapBack'};
+  return null;
+}
+
+function applyZoom(info,ns){
+  const cs=cropStates[info.suffix];if(!cs||!cs.nativeW)return;
+  const wrap=document.getElementById(info.wrapId);const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  const osw=cs.nativeW*cs.scale,osh=cs.nativeH*cs.scale;
+  const nsw=cs.nativeW*ns,nsh=cs.nativeH*ns;
+  cs.ox=cs.ox-(nsw-osw)*(((ww/2)-cs.ox)/osw);cs.oy=cs.oy-(nsh-osh)*(((wh/2)-cs.oy)/osh);
+  cs.scale=ns;applyTransform(info.suffix,info.wrapId);
+}
+
+setupDrag('modal-formulario',t=>{if(document.getElementById('cropWrap')?.contains(t))return{suffix:'',wrapId:'cropWrap',cs:cropStates['']};return null;});
+setupDrag('modal-fisica',t=>{
+  if(document.getElementById('cropWrapFront')?.contains(t))return{suffix:'Front',wrapId:'cropWrapFront',cs:cropStates['Front']};
+  if(document.getElementById('cropWrapBack')?.contains(t))return{suffix:'Back',wrapId:'cropWrapBack',cs:cropStates['Back']};
+  return null;
+});
+
+// ── VISOR DE IMAGEN (zoom rápido, solo lectura) ─────────────────────────────────
+let visorState=null,fotosActuales=null;
+function abrirVisor(src,redondeada){
+  if(!src)return;
+  const img=document.getElementById('visorImg');
+  img.src=src;
+  img.classList.toggle('redondeada',!!redondeada);
+  img.onload=()=>{
+    const body=document.getElementById('visorBody');
+    const bw=body.offsetWidth,bh=body.offsetHeight;
+    const natW=img.naturalWidth,natH=img.naturalHeight;
+    const fitScale=Math.min(bw/natW,bh/natH);
+    visorState={scale:fitScale,minScale:fitScale,maxScale:fitScale*6,natW,natH,ox:(bw-natW*fitScale)/2,oy:(bh-natH*fitScale)/2,pointers:new Map(),dragging:false};
+    aplicarVisorTransform();
+  };
+  if(img.complete&&img.naturalWidth)img.onload();
+  document.getElementById('visorOverlay').classList.add('activa');
+}
+function cerrarVisor(){document.getElementById('visorOverlay').classList.remove('activa');visorState=null;}
+function abrirVisorFlip(){
+  if(!fotosActuales)return;
+  const flipped=document.getElementById('flipCard')?.classList.contains('flipped');
+  const src=flipped?fotosActuales.back:fotosActuales.front;
+  if(src)abrirVisor(src);
+}
+function aplicarVisorTransform(){
+  if(!visorState)return;
+  const img=document.getElementById('visorImg');
+  const body=document.getElementById('visorBody');
+  const bw=body.offsetWidth,bh=body.offsetHeight;
+  const vs=visorState;
+  const sw=vs.natW*vs.scale,sh=vs.natH*vs.scale;
+  vs.ox=sw<=bw?(bw-sw)/2:Math.min(0,Math.max(vs.ox,bw-sw));
+  vs.oy=sh<=bh?(bh-sh)/2:Math.min(0,Math.max(vs.oy,bh-sh));
+  img.style.width=sw+'px';img.style.height=sh+'px';img.style.left=vs.ox+'px';img.style.top=vs.oy+'px';
+}
+(function(){
+  const body=document.getElementById('visorBody');
+  let lastTap=0;
+  body.addEventListener('pointerdown',e=>{
+    if(!visorState)return;
+    body.setPointerCapture(e.pointerId);
+    const now=Date.now();
+    if(now-lastTap<300&&visorState.pointers.size===0){
+      visorState.scale=visorState.scale>visorState.minScale*1.05?visorState.minScale:visorState.minScale*3;
+      aplicarVisorTransform();lastTap=0;return;
+    }
+    lastTap=now;
+    visorState.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(visorState.pointers.size===1){
+      visorState.dragging=true;visorState.startX=e.clientX;visorState.startY=e.clientY;visorState.startOx=visorState.ox;visorState.startOy=visorState.oy;
+    } else if(visorState.pointers.size===2){
+      visorState.dragging=false;
+      const pts=[...visorState.pointers.values()];
+      visorState.startDist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+      visorState.startScale=visorState.scale;
+      const rect=body.getBoundingClientRect();
+      visorState.pinchCx=(pts[0].x+pts[1].x)/2-rect.left;
+      visorState.pinchCy=(pts[0].y+pts[1].y)/2-rect.top;
+    }
+  });
+  body.addEventListener('pointermove',e=>{
+    if(!visorState||!visorState.pointers.has(e.pointerId))return;
+    visorState.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(visorState.pointers.size===1&&visorState.dragging){
+      visorState.ox=visorState.startOx+(e.clientX-visorState.startX);
+      visorState.oy=visorState.startOy+(e.clientY-visorState.startY);
+      aplicarVisorTransform();
+    } else if(visorState.pointers.size===2){
+      const pts=[...visorState.pointers.values()];
+      const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+      const ratio=dist/(visorState.startDist||1);
+      const before=visorState.scale;
+      const ns=Math.min(visorState.maxScale,Math.max(visorState.minScale,visorState.startScale*ratio));
+      visorState.ox=visorState.pinchCx-(visorState.pinchCx-visorState.ox)*(ns/before);
+      visorState.oy=visorState.pinchCy-(visorState.pinchCy-visorState.oy)*(ns/before);
+      visorState.scale=ns;
+      aplicarVisorTransform();
+    }
+  });
+  function endPointer(e){
+    if(!visorState)return;
+    visorState.pointers.delete(e.pointerId);
+    if(visorState.pointers.size===0)visorState.dragging=false;
+    else if(visorState.pointers.size===1){
+      const p=[...visorState.pointers.values()][0];
+      visorState.dragging=true;visorState.startX=p.x;visorState.startY=p.y;visorState.startOx=visorState.ox;visorState.startOy=visorState.oy;
+    }
+  }
+  body.addEventListener('pointerup',endPointer);
+  body.addEventListener('pointercancel',endPointer);
+  body.addEventListener('wheel',e=>{
+    if(!visorState)return;
+    e.preventDefault();
+    const rect=body.getBoundingClientRect();
+    const cx=e.clientX-rect.left,cy=e.clientY-rect.top;
+    const before=visorState.scale;
+    const ns=Math.min(visorState.maxScale,Math.max(visorState.minScale,before*(e.deltaY<0?1.12:0.89)));
+    visorState.ox=cx-(cx-visorState.ox)*(ns/before);
+    visorState.oy=cy-(cy-visorState.oy)*(ns/before);
+    visorState.scale=ns;
+    aplicarVisorTransform();
+  },{passive:false});
+})();
+
+// ── SELECTOR CÁMARA / GALERÍA ───────────────────────────────────────────────────
+let sheetCb=null;
+function abrirSelectorImagen(cb){sheetCb=cb;document.getElementById('sheetOverlay').classList.add('activa');}
+function cerrarSheet(){document.getElementById('sheetOverlay').classList.remove('activa');}
+document.getElementById('sheetCamara').onclick=()=>{const cb=sheetCb;cerrarSheet();pickFileCamera(cb);};
+document.getElementById('sheetGaleria').onclick=()=>{const cb=sheetCb;cerrarSheet();pickFile(cb);};
+document.getElementById('sheetOverlay').addEventListener('click',e=>{if(e.target.id==='sheetOverlay')cerrarSheet();});
+document.getElementById('sheetImportOverlay').addEventListener('click',e=>{if(e.target.id==='sheetImportOverlay')cerrarSheetImport();});
+
+// ── FILE ──────────────────────────────────────────────────────────────────────
+// Detecta si hay un margen blanco/transparente pegado a los bordes de una imagen.
+// Devuelve null si no hay margen relevante, o {trimmedSrc} si lo detectó.
+// Es deliberadamente conservador: exige que el margen sea sólido (99% de certeza
+// por fila/columna) y no avanza más allá del 30% hacia el centro, para no
+// arriesgarse a cortar contenido real de la tarjeta.
+function detectarMargen(src){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const w=img.naturalWidth,h=img.naturalHeight;
+        if(!w||!h){resolve(null);return;}
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
+        const data=ctx.getImageData(0,0,w,h).data;
+        const stepX=Math.max(1,Math.floor(w/300)),stepY=Math.max(1,Math.floor(h/300));
+        const isBg=(x,y)=>{
+          const i=(y*w+x)*4;
+          const a=data[i+3];
+          if(a<10)return true;
+          return data[i]>240&&data[i+1]>240&&data[i+2]>240;
+        };
+        const rowIsBg=y=>{let bg=0,n=0;for(let x=0;x<w;x+=stepX){n++;if(isBg(x,y))bg++;}return bg/n>0.99;};
+        const colIsBg=x=>{let bg=0,n=0;for(let y=0;y<h;y+=stepY){n++;if(isBg(x,y))bg++;}return bg/n>0.99;};
+        let top=0,bottom=h-1,left=0,right=w-1;
+        while(top<h*0.3&&rowIsBg(top))top++;
+        while(bottom>h*0.7&&rowIsBg(bottom))bottom--;
+        while(left<w*0.3&&colIsBg(left))left++;
+        while(right>w*0.7&&colIsBg(right))right--;
+        const cropW=right-left+1,cropH=bottom-top+1;
+        // solo ofrecer el recorte si el margen detectado es de al menos ~1.5% en algún lado
+        const margen=Math.max(top,h-1-bottom,left,w-1-right);
+        if(margen>Math.max(w,h)*0.015&&cropW>20&&cropH>20){
+          const c2=document.createElement('canvas');c2.width=cropW;c2.height=cropH;
+          c2.getContext('2d').drawImage(c,left,top,cropW,cropH,0,0,cropW,cropH);
+          resolve(c2.toDataURL('image/jpeg',0.95));
+          return;
+        }
+        resolve(null);
+      }catch(e){resolve(null);}
+    };
+    img.onerror=()=>resolve(null);
+    img.src=src;
+  });
+}
+// Muestra el modal de confirmación de recorte. esPrimera cambia los textos.
+// Devuelve una Promise<boolean>: true = aplicar este recorte y seguir revisando, false = detenerse aquí.
+function confirmarRecorteMargen(trimmedSrc,esPrimera){
+  document.getElementById('trimPreviewImg').src=trimmedSrc;
+  document.getElementById('trimMensaje').textContent=esPrimera
+    ?'Detectamos un margen alrededor de la tarjeta. ¿Usamos la imagen recortada?'
+    :'Todavía se nota un poco de margen. ¿Recortamos de nuevo?';
+  document.getElementById('trimUseTrimmed').textContent=esPrimera?'✂️ Usar esta imagen (recortada)':'✂️ Recortar de nuevo';
+  document.getElementById('trimUseOriginal').textContent=esPrimera?'Usar imagen original':'✅ Continuar al editor';
+  const overlay=document.getElementById('trimOverlay');
+  overlay.classList.add('activa');
+  return new Promise(resolve=>{
+    const cerrar=()=>overlay.classList.remove('activa');
+    document.getElementById('trimUseTrimmed').onclick=()=>{cerrar();resolve(true);};
+    document.getElementById('trimUseOriginal').onclick=()=>{cerrar();resolve(false);};
+  });
+}
+// Punto de entrada único: detecta margen y pregunta antes de continuar, hasta 4 pasadas.
+async function procesarImagenSeleccionada(src,cb){
+  let current=src;
+  for(let pass=0;pass<4;pass++){
+    const trimmed=await detectarMargen(current);
+    if(!trimmed)break;
+    const usar=await confirmarRecorteMargen(trimmed,pass===0);
+    if(!usar)break;
+    current=trimmed;
+  }
+  cb(current);
+}
+document.getElementById('fileInput').onchange=function(e){
+  const f=e.target.files[0];
+  if(f&&pendingFileCb){const r=new FileReader();r.onload=ev=>pendingFileCb(ev.target.result);r.readAsDataURL(f);}
+  this.value='';
+};
+document.getElementById('fileInputCamera').onchange=function(e){
+  const f=e.target.files[0];
+  if(f&&pendingFileCb){const r=new FileReader();r.onload=ev=>pendingFileCb(ev.target.result);r.readAsDataURL(f);}
+  this.value='';
+};
+function pickFile(cb){pendingFileCb=cb;document.getElementById('fileInput').click();}
+function pickFileCamera(cb){pendingFileCb=cb;document.getElementById('fileInputCamera').click();}
+
+// ── ESTADÍSTICAS ──────────────────────────────────────────────────────────────
+function abrirEstadisticas(){
+  const total=catalogo.length;
+  const obt=catalogo.filter(t=>t.tengo).length;
+  const pct=total>0?Math.round(obt/total*100):0;
+  const tipos=['Evento','Personaje','Marca'];
+  const colores={'Evento':'#0052cc','Personaje':'#a855f7','Marca':'#6366f1'};
+  // tarjeta más reciente conseguida
+  const conseguidas=catalogo.filter(t=>t.tengo&&t.fecha).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const reciente=conseguidas.length?conseguidas[0].titulo:'—';
+
+  let html=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num" style="color:#22c55e">${obt}</div><div class="stat-label">Conseguidas</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#64748b">${total-obt}</div><div class="stat-label">Pendientes</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#3b82f6">${total}</div><div class="stat-label">Total catálogo</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#f59e0b">${pct}%</div><div class="stat-label">Completado</div></div>
+    </div>
+    <p class="seccion-titulo">Por tipo</p>`;
+
+  tipos.forEach(tipo=>{
+    const tot=catalogo.filter(t=>t.tipo===tipo).length;
+    const ten=catalogo.filter(t=>t.tipo===tipo&&t.tengo).length;
+    const p=tot>0?Math.round(ten/tot*100):0;
+    html+=`<div class="stat-tipo-row">
+      <span class="stat-tipo-badge" style="background:${colores[tipo]}">${tipo}</span>
+      <div class="stat-barra-wrap"><div class="stat-barra-fill" style="width:${p}%;background:${colores[tipo]}"></div></div>
+      <span class="stat-tipo-pct">${ten}/${tot}</span>
+    </div>`;
+  });
+
+  html+=`<p class="seccion-titulo" style="margin-top:14px">Última conseguida</p>
+    <div style="padding:8px 0;font-size:var(--font-size-base);color:var(--text-primary)">⭐ ${reciente}</div>`;
+
+  document.getElementById('cuerpo-estadisticas').innerHTML=html;
+  document.getElementById('modal-estadisticas').classList.add('activa');
+}
+
+// ── EXPORTAR / IMPORTAR ───────────────────────────────────────────────────────
+async function exportarColeccion(){
+  const fotos=await dbGetAll('fotos');
+  const datos=JSON.stringify({version:2,catalogo,fotos},null,2);
+  const blob=new Blob([datos],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const fecha=new Date().toISOString().split('T')[0];
+  a.href=url;a.download=`album-bip-respaldo-${fecha}.json`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+  try{localStorage.setItem('ULTIMO_EXPORT',Date.now().toString());}catch(e){}
+  ocultarBannerRespaldo();
+}
+
+function exportarSoloCatalogo(){
+  const soloCatalogo=catalogo.map(t=>({...t,tengo:false,numSerie:'',repetidas:0}));
+  const datos=JSON.stringify({version:2,tipo:'catalogo',catalogo:soloCatalogo,fotos:[]},null,2);
+  const blob=new Blob([datos],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const fecha=new Date().toISOString().split('T')[0];
+  a.href=url;a.download=`album-bip-catalogo-${fecha}.json`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+let pendingImportData=null;
+function cerrarSheetImport(){document.getElementById('sheetImportOverlay').classList.remove('activa');pendingImportData=null;}
+
+function importarColeccion(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async e=>{
+    try{
+      const raw=JSON.parse(e.target.result);
+      let datosCatalogo,datosFotos=[];
+      if(Array.isArray(raw)){datosCatalogo=raw;} // respaldo antiguo, sin fotos físicas
+      else if(raw&&Array.isArray(raw.catalogo)){datosCatalogo=raw.catalogo;datosFotos=Array.isArray(raw.fotos)?raw.fotos:[];}
+      else throw new Error('Formato inválido');
+      pendingImportData={datosCatalogo,datosFotos};
+      document.getElementById('sheetImportOverlay').classList.add('activa');
+    }catch{await mostrarAlerta('❌ El archivo no es válido. Asegúrate de usar un respaldo generado por esta app.');}
+    input.value='';
+  };
+  r.readAsText(f);
+}
+
+async function ejecutarImportReemplazar(){
+  if(!pendingImportData)return;
+  const {datosCatalogo,datosFotos}=pendingImportData;
+  cerrarSheetImport();
+  const ok=await mostrarConfirm(`¿Reemplazar tu colección actual por las ${datosCatalogo.length} tarjetas de este archivo? Esto borra lo que tengas ahora.`,{destructivo:true,textoAceptar:'Reemplazar'});
+  if(!ok)return;
+  catalogo=datosCatalogo;await guardarCatalogo();
+  if(datosFotos.length){
+    await dbClearStore('fotos');
+    for(const ft of datosFotos)await dbPut('fotos',ft);
+  }
+  renderizar();cerrarModal('modal-config');
+  await mostrarAlerta('✅ Colección reemplazada correctamente.');
+}
+
+async function ejecutarImportFusionar(){
+  if(!pendingImportData)return;
+  const {datosCatalogo,datosFotos}=pendingImportData;
+  cerrarSheetImport();
+  const mapaIdViejoNuevo={};
+  let agregadas=0;
+  for(const nueva of datosCatalogo){
+    const yaExiste=catalogo.some(t=>t.titulo===nueva.titulo&&t.fecha===nueva.fecha);
+    if(!yaExiste){
+      const idNuevo=Date.now().toString()+Math.random().toString(36).slice(2,7);
+      mapaIdViejoNuevo[nueva.id]=idNuevo;
+      catalogo.push({...nueva,id:idNuevo});
+      agregadas++;
+    }
+  }
+  await guardarCatalogo();
+  // traspasa fotos físicas solo de las tarjetas realmente nuevas
+  if(datosFotos.length){
+    for(const ft of datosFotos){
+      const idNuevo=mapaIdViejoNuevo[ft.id];
+      if(idNuevo)await dbPut('fotos',{...ft,id:idNuevo});
+    }
+  }
+  renderizar();cerrarModal('modal-config');
+  await mostrarAlerta(agregadas?`✅ Se agregaron ${agregadas} tarjeta(s) nueva(s). Tu colección actual no se tocó.`:'ℹ️ No había tarjetas nuevas para agregar — ya tenías todas.');
+}
+document.getElementById('sheetImportFusionar').onclick=ejecutarImportFusionar;
+document.getElementById('sheetImportReemplazar').onclick=ejecutarImportReemplazar;
+
+// ── STORAGE ───────────────────────────────────────────────────────────────────
+async function guardarCatalogo(){
+  // Guarda cada tarjeta en IndexedDB
+  await dbClearStore('tarjetas');
+  for(const t of catalogo) await dbPut('tarjetas',t);
+  // También guarda en localStorage como respaldo secundario
+  try{localStorage.setItem('DB_BIP_ALBUM_V2',JSON.stringify(catalogo));}catch(e){}
+}
+function cerrarModal(id){document.getElementById(id).classList.remove('activa');}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+resetCrop('');resetCrop('Front');resetCrop('Back');
+cargarPreferencias();
+
+// Pide almacenamiento persistente para que el navegador no borre las fotos (IndexedDB)
+// cuando hay poco espacio o la app lleva tiempo sin abrirse.
+if(navigator.storage&&navigator.storage.persist){
+  navigator.storage.persist().catch(()=>{});
+}
+
+// ── RECORDATORIO DE RESPALDO ───────────────────────────────────────────────────
+const DIAS_AVISO=14;
+function revisarBannerRespaldo(){
+  try{
+    const ultimo=parseInt(localStorage.getItem('ULTIMO_EXPORT')||'0',10);
+    const posp=parseInt(localStorage.getItem('POSPONER_EXPORT')||'0',10);
+    const dias=(Date.now()-ultimo)/86400000;
+    const diasDesdePosponer=(Date.now()-posp)/86400000;
+    if(dias>DIAS_AVISO&&diasDesdePosponer>3){
+      document.getElementById('bannerRespaldo').classList.add('activo');
+    }
+  }catch(e){}
+}
+function ocultarBannerRespaldo(){document.getElementById('bannerRespaldo').classList.remove('activo');}
+function posponerBannerRespaldo(){
+  try{localStorage.setItem('POSPONER_EXPORT',Date.now().toString());}catch(e){}
+  ocultarBannerRespaldo();
+}
+revisarBannerRespaldo();
+
+initDB().then(async()=>{
+  // 1. Intentar cargar desde IndexedDB (fuente principal)
+  const enIDB=await dbGetAll('tarjetas');
+  if(enIDB.length>0){
+    catalogo=enIDB;
+  } else {
+    // 2. Si no hay nada en IDB, migrar desde localStorage
+    const v2=localStorage.getItem('DB_BIP_ALBUM_V2');
+    const v1=localStorage.getItem('DB_BIP_ALBUM');
+    if(v2)catalogo=JSON.parse(v2);
+    else if(v1)catalogo=JSON.parse(v1);
+    // Guardar en IDB para las próximas veces
+    if(catalogo.length>0) await guardarCatalogo();
+  }
+  renderizar();
+});
+
+// ── SERVICE WORKER ────────────────────────────────────────────────────────────
+// Registro simple: sin auto-reload para no interrumpir la sesión ni perder datos
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
