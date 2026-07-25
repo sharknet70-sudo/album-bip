@@ -825,7 +825,7 @@ async function verDetalle(id){
   const t=catalogo.find(x=>x.id===id);selId=id;
   const fotos=await dbGet('fotos',id)||{};
   fotosActuales=fotos;
-  document.getElementById('nav-detalle-bg').style.background=t.tengo?colorTipo(t.tipo):'#64748b';
+  document.getElementById('nav-detalle-bg').style.background='';
   document.getElementById('det-titulo').textContent=t.titulo;
   const c=document.getElementById('cuerpo-detalle');c.innerHTML='';
 
