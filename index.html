@@ -318,14 +318,28 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
     border:none!important;
     box-shadow:none!important;
   }
-  .contenido-scroll{-webkit-overflow-scrolling:touch;}
+  .contenido-scroll{-webkit-overflow-scrolling:touch;padding-top:6px;}
 
-  /* Tabs: de 2x2 a una sola fila, gana espacio vertical */
+  /* Header: menos alto */
+  .header{padding:4px 12px;font-size:var(--font-size-base);}
+
+  /* Progreso: compactado */
+  .progreso-container{padding:0 12px 4px;}
+  .progreso-card{padding:4px 10px;}
+  .progreso-texto{margin-bottom:2px;font-size:var(--font-size-xs);}
+  .barra-gris{height:4px;}
+
+  /* Tabs: de 2x2 a una sola fila, y más bajos */
   .tabs{grid-template-columns:repeat(4,1fr);}
-  .tab{padding:8px 4px;}
+  .tab{padding:5px 4px;font-size:var(--font-size-xs);}
 
-  /* Catálogo: aprovecha el ancho extra en vez de quedarse en 2 columnas fijas */
-  .cuadricula{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+  /* Toolbar (buscador + filtros): compactado */
+  .toolbar{padding:4px 10px;gap:4px;}
+  .search-box{padding:3px 10px;}
+  .filter-row{gap:4px;}
+
+  /* Catálogo: tarjetas grandes, no muchas columnas angostas */
+  .cuadricula{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
   .empty-state{grid-column:1/-1;}
 
   /* Modales con imagen + datos (detalle, formulario, física): layout en 2 columnas
