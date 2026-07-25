@@ -342,32 +342,33 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
   .cuadricula{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
   .empty-state{grid-column:1/-1;}
 
-  /* Modales con imagen + datos (detalle, formulario, física): layout en 2 columnas
+  /* Modales con imagen + datos (formulario, física): layout en 2 columnas
      usando column-count, así el contenido fluye solo sin reordenar el DOM,
      y los botones de acción se fuerzan a ancho completo con column-span. */
-  #modal-detalle .cuerpo-modal,
   #modal-formulario .cuerpo-modal,
   #modal-fisica .cuerpo-modal{
     column-count:2;
     column-gap:22px;
     padding:12px 20px;
   }
-  #modal-detalle .cuerpo-modal .btn-accion,
   #modal-formulario .cuerpo-modal .btn-accion,
-  #modal-fisica .cuerpo-modal .btn-accion,
-  #modal-detalle .cuerpo-modal .bloque-fisico .flip-btn,
-  #modal-detalle .cuerpo-modal .bloque-fisico .flip-hint{
+  #modal-fisica .cuerpo-modal .btn-accion{
     column-span:all;
   }
-  #modal-detalle .cuerpo-modal .det-img-wrap,
   #modal-formulario .cuerpo-modal .crop-outer,
   #modal-formulario .cuerpo-modal .upload-area,
   #modal-fisica .cuerpo-modal .crop-outer,
-  #modal-fisica .cuerpo-modal .upload-area,
-  #modal-detalle .cuerpo-modal .bloque-fisico,
-  #modal-detalle .cuerpo-modal .bloque-bloqueado,
-  #modal-detalle .cuerpo-modal .flip-container{
+  #modal-fisica .cuerpo-modal .upload-area{
     break-inside:avoid;
+  }
+
+  /* Modal de detalle: se mantiene en una sola columna (imagen → datos → foto física),
+     igual que en vertical, para no romper el orden de lectura. Solo se centra con
+     ancho máximo para no estirar demasiado el texto. */
+  #modal-detalle .cuerpo-modal{
+    max-width:600px;
+    margin:0 auto;
+    width:100%;
   }
 
   /* Modales de solo texto (config, estadísticas, repetida): no se benefician de 2 columnas,
