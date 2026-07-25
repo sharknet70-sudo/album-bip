@@ -86,74 +86,6 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
   .contenido-scroll{-webkit-overflow-scrolling:touch;}
 }
 
-/* ── RESPONSIVE CELULAR ROTADO (landscape) ─────────────────────────────── */
-/* max-height:500px aísla "celular rotado" de una tablet en landscape (que tiene mucho más alto real) */
-@media (orientation: landscape) and (max-height: 500px) {
-  body{padding:0!important;background:var(--bg-frame);}
-  .celular-frame{
-    width:100%!important;
-    height:100vh!important;
-    height:100dvh!important;
-    min-height:unset!important;
-    border-radius:0!important;
-    border:none!important;
-    box-shadow:none!important;
-  }
-  .contenido-scroll{-webkit-overflow-scrolling:touch;}
-
-  /* Tabs: de 2x2 a una sola fila, gana espacio vertical */
-  .tabs{grid-template-columns:repeat(4,1fr);}
-  .tab{padding:8px 4px;}
-
-  /* Catálogo: aprovecha el ancho extra en vez de quedarse en 2 columnas fijas */
-  .cuadricula{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
-  .empty-state{grid-column:1/-1;}
-
-  /* Modales con imagen + datos (detalle, formulario, física): layout en 2 columnas
-     usando column-count, así el contenido fluye solo sin reordenar el DOM,
-     y los botones de acción se fuerzan a ancho completo con column-span. */
-  #modal-detalle .cuerpo-modal,
-  #modal-formulario .cuerpo-modal,
-  #modal-fisica .cuerpo-modal{
-    column-count:2;
-    column-gap:22px;
-    padding:12px 20px;
-  }
-  #modal-detalle .cuerpo-modal .btn-accion,
-  #modal-formulario .cuerpo-modal .btn-accion,
-  #modal-fisica .cuerpo-modal .btn-accion,
-  #modal-detalle .cuerpo-modal .bloque-fisico .flip-btn,
-  #modal-detalle .cuerpo-modal .bloque-fisico .flip-hint{
-    column-span:all;
-  }
-  #modal-detalle .cuerpo-modal .det-img-wrap,
-  #modal-formulario .cuerpo-modal .crop-outer,
-  #modal-formulario .cuerpo-modal .upload-area,
-  #modal-fisica .cuerpo-modal .crop-outer,
-  #modal-fisica .cuerpo-modal .upload-area,
-  #modal-detalle .cuerpo-modal .bloque-fisico,
-  #modal-detalle .cuerpo-modal .bloque-bloqueado,
-  #modal-detalle .cuerpo-modal .flip-container{
-    break-inside:avoid;
-  }
-
-  /* Modales de solo texto (config, estadísticas, repetida): no se benefician de 2 columnas,
-     mejor centrados con ancho máximo para no estirar demasiado las líneas de texto */
-  #modal-config .cuerpo-modal,
-  #modal-estadisticas .cuerpo-modal,
-  #modal-repetida .cuerpo-modal{
-    max-width:600px;
-    margin:0 auto;
-    width:100%;
-  }
-
-  /* Botón flotante: respeta también el safe area lateral (isla/notch) además del inferior */
-  .btn-agregar{
-    right:calc(15px + env(safe-area-inset-right));
-    bottom:calc(20px + env(safe-area-inset-bottom));
-  }
-}
-
 /* ── FRAME ─────────────────────────────────────────────────────────────── */
 .celular-frame{width:340px;min-height:640px;background:var(--bg-frame);border-radius:24px;box-shadow:var(--shadow);border:7px solid #0f172a;overflow:hidden;display:flex;flex-direction:column;position:relative;}
 .header{background:var(--accent);color:white;padding:10px 12px;text-align:center;font-weight:bold;font-size:var(--font-size-xl);display:flex;align-items:center;justify-content:space-between;}
@@ -371,6 +303,75 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 [data-theme="dark"] .dialogo-btns button{color:#3b82f6;}
 [data-theme="dark"] .dialogo-btns button.dialogo-destructivo{color:#ef4444;}
 [data-theme="dark"] .dialogo-btns button.dialogo-secundario{color:var(--text-secondary);}
+/* ── RESPONSIVE CELULAR ROTADO (landscape) ─────────────────────────────── */
+/* max-height:500px aísla "celular rotado" de una tablet en landscape (que tiene mucho más alto real) */
+/* Este bloque va al FINAL del <style> a propósito: en CSS, con la misma especificidad,
+   gana la regla escrita más abajo, y necesitamos que estas reglas ganen sobre las base. */
+@media (orientation: landscape) and (max-height: 500px) {
+  body{padding:0!important;background:var(--bg-frame);}
+  .celular-frame{
+    width:100%!important;
+    height:100vh!important;
+    height:100dvh!important;
+    min-height:unset!important;
+    border-radius:0!important;
+    border:none!important;
+    box-shadow:none!important;
+  }
+  .contenido-scroll{-webkit-overflow-scrolling:touch;}
+
+  /* Tabs: de 2x2 a una sola fila, gana espacio vertical */
+  .tabs{grid-template-columns:repeat(4,1fr);}
+  .tab{padding:8px 4px;}
+
+  /* Catálogo: aprovecha el ancho extra en vez de quedarse en 2 columnas fijas */
+  .cuadricula{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+  .empty-state{grid-column:1/-1;}
+
+  /* Modales con imagen + datos (detalle, formulario, física): layout en 2 columnas
+     usando column-count, así el contenido fluye solo sin reordenar el DOM,
+     y los botones de acción se fuerzan a ancho completo con column-span. */
+  #modal-detalle .cuerpo-modal,
+  #modal-formulario .cuerpo-modal,
+  #modal-fisica .cuerpo-modal{
+    column-count:2;
+    column-gap:22px;
+    padding:12px 20px;
+  }
+  #modal-detalle .cuerpo-modal .btn-accion,
+  #modal-formulario .cuerpo-modal .btn-accion,
+  #modal-fisica .cuerpo-modal .btn-accion,
+  #modal-detalle .cuerpo-modal .bloque-fisico .flip-btn,
+  #modal-detalle .cuerpo-modal .bloque-fisico .flip-hint{
+    column-span:all;
+  }
+  #modal-detalle .cuerpo-modal .det-img-wrap,
+  #modal-formulario .cuerpo-modal .crop-outer,
+  #modal-formulario .cuerpo-modal .upload-area,
+  #modal-fisica .cuerpo-modal .crop-outer,
+  #modal-fisica .cuerpo-modal .upload-area,
+  #modal-detalle .cuerpo-modal .bloque-fisico,
+  #modal-detalle .cuerpo-modal .bloque-bloqueado,
+  #modal-detalle .cuerpo-modal .flip-container{
+    break-inside:avoid;
+  }
+
+  /* Modales de solo texto (config, estadísticas, repetida): no se benefician de 2 columnas,
+     mejor centrados con ancho máximo para no estirar demasiado las líneas de texto */
+  #modal-config .cuerpo-modal,
+  #modal-estadisticas .cuerpo-modal,
+  #modal-repetida .cuerpo-modal{
+    max-width:600px;
+    margin:0 auto;
+    width:100%;
+  }
+
+  /* Botón flotante: respeta también el safe area lateral (isla/notch) además del inferior */
+  .btn-agregar{
+    right:calc(15px + env(safe-area-inset-right));
+    bottom:calc(20px + env(safe-area-inset-bottom));
+  }
+}
 </style>
 </head>
 <body>
