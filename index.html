@@ -279,6 +279,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 
 /* ── REPETIDAS ─────────────────────────────────────────────────────────── */
 .badge-repetida{position:absolute;top:5px;right:6px;background:rgba(245,158,11,0.9);color:white;font-size:13px;font-weight:bold;border-radius:12px;padding:3px 8px;}
+.badge-no-comercializada{position:absolute;bottom:5px;left:5px;background:rgba(100,116,139,0.92);color:white;font-size:10px;font-weight:bold;border-radius:8px;padding:2px 7px;text-transform:uppercase;letter-spacing:0.3px;}
 .stepper-repetida{display:flex;align-items:center;justify-content:center;gap:16px;margin:24px 0;}
 .stepper-repetida input{width:70px;text-align:center;font-size:26px;font-weight:bold;border:1px solid var(--border2);border-radius:8px;padding:6px;background:var(--bg-card);color:var(--text-primary);}
 
@@ -476,6 +477,10 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
         <option value="Conmemoracion">Conmemoración</option>
         <option value="CampanaSocial">Campaña Social</option>
       </select>
+      <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary)">
+        <input type="checkbox" id="form-no-comercializada" style="width:18px;height:18px">
+        No comercializada / edición no vendida
+      </label>
       <p class="seccion-titulo">Descripción</p>
       <textarea class="caja-texto" id="form-desc" rows="3" placeholder="Descripción de la edición..."></textarea>
       <p class="seccion-titulo">Imagen del Catálogo</p>
@@ -724,11 +729,12 @@ function crearElTarjeta(t,modoRepetidas){
   el.onclick=modoRepetidas?()=>verRepetida(t.id):()=>verDetalle(t.id);
   const icono=modoRepetidas?'':(t.tengo?`<div class="check-icono tengo">✔</div>`:`<div class="check-icono no-tengo">🔒</div>`);
   const badge=modoRepetidas?`<div class="badge-repetida">×${t.repetidas}</div>`:'';
+  const badgeNC=(!modoRepetidas&&t.noComercializada)?`<div class="badge-no-comercializada">No vendida</div>`:'';
   if(t.imgBase64){
-    el.innerHTML=`<img class="bip-thumb" src="${t.imgBase64}" alt="${t.titulo}">${icono}${badge}<div class="logo-bip">bip!</div>`;
+    el.innerHTML=`<img class="bip-thumb" src="${t.imgBase64}" alt="${t.titulo}">${icono}${badge}${badgeNC}<div class="logo-bip">bip!</div>`;
   } else {
     el.style.background=t.tengo?colorTipo(t.tipo):'';
-    el.innerHTML=`<div class="bip-color-bg"><span>${t.titulo}</span></div>${icono}${badge}<div class="logo-bip">bip!</div>`;
+    el.innerHTML=`<div class="bip-color-bg"><span>${t.titulo}</span></div>${icono}${badge}${badgeNC}<div class="logo-bip">bip!</div>`;
   }
   return el;
 }
@@ -843,6 +849,7 @@ async function verDetalle(id){
   info.innerHTML=`
     <div class="det-row"><span class="det-label">Tipo</span><span class="det-val"><span class="badge" style="background:${colorTipo(t.tipo)}">${labelTipo(t.tipo)}</span></span></div>
     <div class="det-row"><span class="det-label">Lanzamiento</span><span class="det-val">${fmtFecha(t.fecha)}</span></div>
+    ${t.noComercializada?`<div class="det-row"><span class="det-label">Estado</span><span class="det-val">⚠️ No comercializada</span></div>`:''}
     <div class="det-row"><span class="det-label">Descripción</span><span class="det-val">${t.descripcion||'Sin descripción.'}</span></div>`;
   c.appendChild(info);
 
@@ -1009,7 +1016,7 @@ document.getElementById('btnAgregar').onclick=()=>{
   document.getElementById('form-titulo-nav').textContent='Nueva Tarjeta';
   document.getElementById('form-titulo').value='';
   document.getElementById('form-fecha').value=new Date().toISOString().split('T')[0];
-  document.getElementById('form-desc').value='';document.getElementById('form-tipo').value='Evento';
+  document.getElementById('form-desc').value='';document.getElementById('form-tipo').value='Evento';document.getElementById('form-no-comercializada').checked=false;
   document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';
   document.getElementById('cropOuter').style.display='none';
   document.getElementById('modal-formulario').classList.add('activa');
@@ -1022,6 +1029,7 @@ function activarEdicion(t){
   document.getElementById('form-fecha').value=t.fecha;
   document.getElementById('form-tipo').value=t.tipo;
   document.getElementById('form-desc').value=t.descripcion||'';
+  document.getElementById('form-no-comercializada').checked=!!t.noComercializada;
   if(t.imgBase64){cropStates[''].originalSrc=t.imgBase64;document.getElementById('uploadArea').textContent='✓ Imagen cargada';setTimeout(()=>initCrop(t.imgBase64,'','cropWrap','cropOuter','zoomSlider'),60);}
   else{document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';document.getElementById('cropOuter').style.display='none';}
   cerrarModal('modal-detalle');document.getElementById('modal-formulario').classList.add('activa');
@@ -1040,7 +1048,7 @@ document.getElementById('btnGuardar').onclick=async()=>{
     fi=await doCrop('cropWrap',cs);
   }
   const ex=editId?catalogo.find(x=>x.id===editId):null;
-  const obj={id:editId||Date.now().toString(),titulo,fecha:document.getElementById('form-fecha').value,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
+  const obj={id:editId||Date.now().toString(),titulo,fecha:document.getElementById('form-fecha').value,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:document.getElementById('form-no-comercializada').checked,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
   if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
   guardarCatalogo();cerrarModal('modal-formulario');renderizar();
 };
