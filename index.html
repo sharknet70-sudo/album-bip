@@ -1091,8 +1091,10 @@ function computeMinScale(cs,ww,wh){
   const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
   const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
   const reqW=ww*c+wh*s,reqH=ww*s+wh*c;
-  // +10% de margen: cubre redondeos de píxeles del navegador sin notarse a simple vista
-  return Math.max(reqW/cs.nativeW,reqH/cs.nativeH)*1.10;
+  // +1.5% de margen: cubre redondeos de píxeles del navegador sin notarse a simple vista.
+  // (antes era 10%, pero en imágenes cuya proporción ya calza bien con el marco eso forzaba
+  // un recorte varias veces mayor al necesario, cortando contenido cerca de los bordes)
+  return Math.max(reqW/cs.nativeW,reqH/cs.nativeH)*1.015;
 }
 // escala a la que se ve la imagen COMPLETA dentro del marco, sin recortar nada (punto de partida del zoom)
 function computeFitScale(cs,ww,wh){
