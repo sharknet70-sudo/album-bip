@@ -1006,7 +1006,7 @@ const CROP_MAP={'':{wrapId:'cropWrap',outerId:'cropOuter',sliderId:'zoomSlider',
   'Back':{wrapId:'cropWrapBack',outerId:'cropOuterBack',sliderId:'zoomBack',rotLayerId:'rotLayerBack',imgId:'cropImgBack'}};
 
 function resetCrop(s){
-  cropStates[s]={nativeW:0,nativeH:0,ox:0,oy:0,scale:1,minScale:1,fitScale:1,rotBase:0,rotFine:0,originalSrc:'',dragging:false};
+  cropStates[s]={nativeW:0,nativeH:0,ox:0,oy:0,scale:1,baseX:1,baseY:1,minScale:1,fitScale:1,rotBase:0,rotFine:0,originalSrc:'',dragging:false};
   const q=document.querySelector(`.level-slider[data-suffix="${s}"]`);
   if(q)q.value=0;
 }
@@ -1096,6 +1096,16 @@ function computeMinScale(cs,ww,wh){
   // un recorte varias veces mayor al necesario, cortando contenido cerca de los bordes)
   return Math.max(reqW/cs.nativeW,reqH/cs.nativeH)*1.015;
 }
+// escala NO uniforme (independiente en X e Y) que hace calzar la imagen exacta en el marco:
+// sin recortar contenido y sin dejar huecos. Es el punto de partida por defecto del editor.
+// Si la imagen no tiene exactamente la proporción del marco, esto implica un leve estiramiento
+// (casi imperceptible cuando la diferencia de proporción es pequeña, que es el caso habitual).
+function computeBase(cs,ww,wh){
+  const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
+  const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
+  const reqW=ww*c+wh*s,reqH=ww*s+wh*c;
+  return{x:reqW/cs.nativeW,y:reqH/cs.nativeH};
+}
 // escala a la que se ve la imagen COMPLETA dentro del marco, sin recortar nada (punto de partida del zoom)
 function computeFitScale(cs,ww,wh){
   const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
@@ -1125,15 +1135,11 @@ function initCrop(src,suffix,wrapId,outerId,sliderId){
     const cs=cropStates[suffix||''];
     cs.nativeW=img.naturalWidth;cs.nativeH=img.naturalHeight;
     cs.rotBase=0;cs.rotFine=0;
-    cs.minScale=computeMinScale(cs,ww,wh);
-    cs.fitScale=computeFitScale(cs,ww,wh);
-    cs.scale=cs.minScale;
-    cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
+    const base=computeBase(cs,ww,wh);cs.baseX=base.x;cs.baseY=base.y;
+    cs.scale=1;// 1 = calce exacto por defecto (sin recortar contenido, sin huecos)
+    cs.ox=(ww-cs.nativeW*cs.baseX*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.baseY*cs.scale)/2;
     const sl=document.getElementById(sliderId);
-    const minVal=Math.round(cs.fitScale*1000)/10;
-    const coverVal=Math.round(cs.minScale*1000)/10;
-    const maxVal=Math.min(Math.max(coverVal*2.5,minVal*4),250);
-    sl.min=minVal;sl.max=maxVal;sl.step=0.1;sl.value=coverVal;
+    sl.min=100;sl.max=400;sl.step=0.1;sl.value=100;
     const lvl=document.querySelector(`.level-slider[data-suffix="${suffix||''}"]`);
     if(lvl)lvl.value=0;
     applyTransform(suffix||'',wrapId);
@@ -1147,7 +1153,7 @@ function applyTransform(suffix,wrapId){
   const img=document.getElementById('cropImg'+(suffix||''));
   const wrap=document.getElementById(wrapId);
   const ww=wrap.clientWidth,wh=wrap.clientHeight;
-  const sw=cs.nativeW*cs.scale,sh=cs.nativeH*cs.scale;
+  const sw=cs.nativeW*cs.baseX*cs.scale,sh=cs.nativeH*cs.baseY*cs.scale;
   const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
   const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
   const reqW=ww*c+wh*s,reqH=ww*s+wh*c;
@@ -1167,14 +1173,11 @@ function recalcMinScale(suffix){
   const map=CROP_MAP[suffix];
   const wrap=document.getElementById(map.wrapId);
   const ww=wrap.clientWidth,wh=wrap.clientHeight;
-  cs.minScale=computeMinScale(cs,ww,wh);
-  cs.fitScale=computeFitScale(cs,ww,wh);
-  if(cs.scale<cs.fitScale)cs.scale=cs.fitScale;
-  cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
+  const base=computeBase(cs,ww,wh);cs.baseX=base.x;cs.baseY=base.y;
+  if(cs.scale<1)cs.scale=1;
+  cs.ox=(ww-cs.nativeW*cs.baseX*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.baseY*cs.scale)/2;
   const sl=document.getElementById(map.sliderId);
-  const minVal=Math.round(cs.fitScale*1000)/10;
-  sl.min=minVal;
-  if(parseFloat(sl.value)<minVal)sl.value=minVal;
+  if(parseFloat(sl.value)<100)sl.value=100;
   applyTransform(suffix,map.wrapId);
 }
 
@@ -1206,7 +1209,7 @@ function doCrop(wrapId,cs){
       ctx.translate(ww/2,wh/2);
       ctx.rotate(rad);
       ctx.translate(-ww/2,-wh/2);
-      ctx.drawImage(ni,0,0,ni.naturalWidth,ni.naturalHeight,cs.ox,cs.oy,cs.nativeW*cs.scale,cs.nativeH*cs.scale);
+      ctx.drawImage(ni,0,0,ni.naturalWidth,ni.naturalHeight,cs.ox,cs.oy,cs.nativeW*cs.baseX*cs.scale,cs.nativeH*cs.baseY*cs.scale);
       ctx.restore();
       resolve(canvas.toDataURL('image/jpeg',0.95));
     };
@@ -1256,8 +1259,8 @@ function setupDrag(pantallaId,getCropInfo){
       cs.rotFine=Math.min(15,Math.max(-15,cs.pinchStartRotFine+deltaAngle));
       const map=CROP_MAP[active.suffix];
       const wrap=document.getElementById(map.wrapId);const ww=wrap.clientWidth,wh=wrap.clientHeight;
-      cs.minScale=computeMinScale(cs,ww,wh);
-      let ns=Math.min(Math.max(cs.pinchStartScale*ratio,cs.minScale),cs.minScale*2.5);
+      const base=computeBase(cs,ww,wh);cs.baseX=base.x;cs.baseY=base.y;
+      let ns=Math.min(Math.max(cs.pinchStartScale*ratio,1),4);
       cs.ox=cs.pinchCx-(cs.pinchCx-cs.pinchStartOx)*(ns/cs.pinchStartScale);
       cs.oy=cs.pinchCy-(cs.pinchCy-cs.pinchStartOy)*(ns/cs.pinchStartScale);
       cs.scale=ns;
@@ -1311,8 +1314,8 @@ function zoomInfoFromId(id){
 function applyZoom(info,ns){
   const cs=cropStates[info.suffix];if(!cs||!cs.nativeW)return;
   const wrap=document.getElementById(info.wrapId);const ww=wrap.clientWidth,wh=wrap.clientHeight;
-  const osw=cs.nativeW*cs.scale,osh=cs.nativeH*cs.scale;
-  const nsw=cs.nativeW*ns,nsh=cs.nativeH*ns;
+  const osw=cs.nativeW*cs.baseX*cs.scale,osh=cs.nativeH*cs.baseY*cs.scale;
+  const nsw=cs.nativeW*cs.baseX*ns,nsh=cs.nativeH*cs.baseY*ns;
   cs.ox=cs.ox-(nsw-osw)*(((ww/2)-cs.ox)/osw);cs.oy=cs.oy-(nsh-osh)*(((wh/2)-cs.oy)/osh);
   cs.scale=ns;applyTransform(info.suffix,info.wrapId);
 }
