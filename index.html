@@ -1127,13 +1127,13 @@ function initCrop(src,suffix,wrapId,outerId,sliderId){
     cs.rotBase=0;cs.rotFine=0;
     cs.minScale=computeMinScale(cs,ww,wh);
     cs.fitScale=computeFitScale(cs,ww,wh);
-    cs.scale=cs.fitScale;
+    cs.scale=cs.minScale;
     cs.ox=(ww-cs.nativeW*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.scale)/2;
     const sl=document.getElementById(sliderId);
     const minVal=Math.round(cs.fitScale*1000)/10;
     const coverVal=Math.round(cs.minScale*1000)/10;
     const maxVal=Math.min(Math.max(coverVal*2.5,minVal*4),250);
-    sl.min=minVal;sl.max=maxVal;sl.step=0.1;sl.value=minVal;
+    sl.min=minVal;sl.max=maxVal;sl.step=0.1;sl.value=coverVal;
     const lvl=document.querySelector(`.level-slider[data-suffix="${suffix||''}"]`);
     if(lvl)lvl.value=0;
     applyTransform(suffix||'',wrapId);
