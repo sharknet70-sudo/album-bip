@@ -1001,9 +1001,11 @@ function mostrarConfirm(mensaje,opciones){
 }
 
 // ── FORMULARIO CATÁLOGO ───────────────────────────────────────────────────────
-const CROP_MAP={'':{wrapId:'cropWrap',outerId:'cropOuter',sliderId:'zoomSlider',rotLayerId:'rotLayer',imgId:'cropImg'},
-  'Front':{wrapId:'cropWrapFront',outerId:'cropOuterFront',sliderId:'zoomFront',rotLayerId:'rotLayerFront',imgId:'cropImgFront'},
-  'Back':{wrapId:'cropWrapBack',outerId:'cropOuterBack',sliderId:'zoomBack',rotLayerId:'rotLayerBack',imgId:'cropImgBack'}};
+// modo 'stretch': estira X/Y por separado para que quepa la imagen completa sin recortar (catálogo, diseño).
+// modo 'cover': escala pareja (X=Y) que cubre el marco completo recortando el sobrante, sin deformar (fotos físicas).
+const CROP_MAP={'':{wrapId:'cropWrap',outerId:'cropOuter',sliderId:'zoomSlider',rotLayerId:'rotLayer',imgId:'cropImg',modo:'stretch'},
+  'Front':{wrapId:'cropWrapFront',outerId:'cropOuterFront',sliderId:'zoomFront',rotLayerId:'rotLayerFront',imgId:'cropImgFront',modo:'cover'},
+  'Back':{wrapId:'cropWrapBack',outerId:'cropOuterBack',sliderId:'zoomBack',rotLayerId:'rotLayerBack',imgId:'cropImgBack',modo:'cover'}};
 
 function resetCrop(s){
   cropStates[s]={nativeW:0,nativeH:0,ox:0,oy:0,scale:1,baseX:1,baseY:1,minScale:1,fitScale:1,rotBase:0,rotFine:0,originalSrc:'',dragging:false};
@@ -1100,10 +1102,15 @@ function computeMinScale(cs,ww,wh){
 // sin recortar contenido y sin dejar huecos. Es el punto de partida por defecto del editor.
 // Si la imagen no tiene exactamente la proporción del marco, esto implica un leve estiramiento
 // (casi imperceptible cuando la diferencia de proporción es pequeña, que es el caso habitual).
-function computeBase(cs,ww,wh){
+function computeBase(cs,ww,wh,modo){
   const rad=((cs.rotBase||0)+(cs.rotFine||0))*Math.PI/180;
   const c=Math.abs(Math.cos(rad)),s=Math.abs(Math.sin(rad));
   const reqW=ww*c+wh*s,reqH=ww*s+wh*c;
+  if(modo==='cover'){
+    // escala pareja: cubre el marco completo (sin huecos) recortando el sobrante, sin deformar proporción
+    const k=Math.max(reqW/cs.nativeW,reqH/cs.nativeH);
+    return{x:k,y:k};
+  }
   return{x:reqW/cs.nativeW,y:reqH/cs.nativeH};
 }
 // escala a la que se ve la imagen COMPLETA dentro del marco, sin recortar nada (punto de partida del zoom)
@@ -1135,7 +1142,8 @@ function initCrop(src,suffix,wrapId,outerId,sliderId){
     const cs=cropStates[suffix||''];
     cs.nativeW=img.naturalWidth;cs.nativeH=img.naturalHeight;
     cs.rotBase=0;cs.rotFine=0;
-    const base=computeBase(cs,ww,wh);cs.baseX=base.x;cs.baseY=base.y;
+    const modo=(CROP_MAP[suffix||''].modo)||'stretch';
+    const base=computeBase(cs,ww,wh,modo);cs.baseX=base.x;cs.baseY=base.y;
     cs.scale=1;// 1 = calce exacto por defecto (sin recortar contenido, sin huecos)
     cs.ox=(ww-cs.nativeW*cs.baseX*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.baseY*cs.scale)/2;
     const sl=document.getElementById(sliderId);
@@ -1173,7 +1181,8 @@ function recalcMinScale(suffix){
   const map=CROP_MAP[suffix];
   const wrap=document.getElementById(map.wrapId);
   const ww=wrap.clientWidth,wh=wrap.clientHeight;
-  const base=computeBase(cs,ww,wh);cs.baseX=base.x;cs.baseY=base.y;
+  const modo=map.modo||'stretch';
+  const base=computeBase(cs,ww,wh,modo);cs.baseX=base.x;cs.baseY=base.y;
   if(cs.scale<1)cs.scale=1;
   cs.ox=(ww-cs.nativeW*cs.baseX*cs.scale)/2;cs.oy=(wh-cs.nativeH*cs.baseY*cs.scale)/2;
   const sl=document.getElementById(map.sliderId);
@@ -1259,7 +1268,7 @@ function setupDrag(pantallaId,getCropInfo){
       cs.rotFine=Math.min(15,Math.max(-15,cs.pinchStartRotFine+deltaAngle));
       const map=CROP_MAP[active.suffix];
       const wrap=document.getElementById(map.wrapId);const ww=wrap.clientWidth,wh=wrap.clientHeight;
-      const base=computeBase(cs,ww,wh);cs.baseX=base.x;cs.baseY=base.y;
+      const base=computeBase(cs,ww,wh,map.modo||'stretch');cs.baseX=base.x;cs.baseY=base.y;
       let ns=Math.min(Math.max(cs.pinchStartScale*ratio,1),4);
       cs.ox=cs.pinchCx-(cs.pinchCx-cs.pinchStartOx)*(ns/cs.pinchStartScale);
       cs.oy=cs.pinchCy-(cs.pinchCy-cs.pinchStartOy)*(ns/cs.pinchStartScale);
