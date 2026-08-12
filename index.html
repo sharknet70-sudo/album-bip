@@ -106,6 +106,18 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 [data-theme="dark"] .tab.activo{color:#3b82f6;border-bottom-color:#3b82f6;}
 [data-theme="dark"] .tab{color:var(--text-secondary);}
 
+/* ── MODO SOLO TARJETAS ────────────────────────────────────────────────── */
+.modo-solo-tarjetas .progreso-container,
+.modo-solo-tarjetas .banner-respaldo,
+.modo-solo-tarjetas .toolbar{display:none!important;}
+.modo-solo-tarjetas .tabs{display:flex;justify-content:center;gap:6px;padding:6px 0;transition:transform 0.25s ease,opacity 0.25s ease;}
+.modo-solo-tarjetas .tab{flex:none;padding:6px 12px;border-radius:20px;border-bottom:none;background:var(--bg-input);font-size:16px;}
+.modo-solo-tarjetas .tab.activo{background:var(--accent);color:white;}
+[data-theme="dark"] .modo-solo-tarjetas .tab.activo{background:#3b82f6;color:white;}
+.modo-solo-tarjetas .tab-texto{display:none;}
+.tabs.tabs-oculto{transform:translateY(-150%);opacity:0;pointer-events:none;}
+.btn-config.activo{opacity:0.6;}
+
 /* ── TOOLBAR ───────────────────────────────────────────────────────────── */
 .toolbar{padding:8px 10px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;}
 .search-box{display:flex;align-items:center;gap:6px;background:var(--bg-input);border-radius:8px;padding:6px 10px;border:1px solid var(--border);}
@@ -395,6 +407,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
   <div class="header">
     <button class="btn-config" onclick="abrirEstadisticas()" title="Estadísticas">📊</button>
     <span class="header-title">Mi Álbum Bip!</span>
+    <button class="btn-config" id="btnModoSolo" onclick="toggleModoSoloTarjetas()" title="Modo solo tarjetas">🖼️</button>
     <button class="btn-config" onclick="abrirConfig()" title="Configuración">⚙️</button>
   </div>
   <div class="progreso-container">
@@ -410,11 +423,11 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
       <button onclick="posponerBannerRespaldo()">Más tarde</button>
     </div>
   </div>
-  <div class="tabs">
-    <div class="tab activo" id="tab-catalogo" onclick="setTab('catalogo')">📋 Catálogo</div>
-    <div class="tab" id="tab-coleccion" onclick="setTab('coleccion')">⭐ Mi Colección</div>
-    <div class="tab" id="tab-conseguir" onclick="setTab('conseguir')">🎯 Por Conseguir</div>
-    <div class="tab" id="tab-repetidas" onclick="setTab('repetidas')">🔁 Repetidas</div>
+  <div class="tabs" id="tabsBar">
+    <div class="tab activo" id="tab-catalogo" onclick="setTab('catalogo')"><span class="tab-icono">📋</span><span class="tab-texto"> Catálogo</span></div>
+    <div class="tab" id="tab-coleccion" onclick="setTab('coleccion')"><span class="tab-icono">⭐</span><span class="tab-texto"> Mi Colección</span></div>
+    <div class="tab" id="tab-conseguir" onclick="setTab('conseguir')"><span class="tab-icono">🎯</span><span class="tab-texto"> Por Conseguir</span></div>
+    <div class="tab" id="tab-repetidas" onclick="setTab('repetidas')"><span class="tab-icono">🔁</span><span class="tab-texto"> Repetidas</span></div>
   </div>
   <div class="toolbar">
     <div class="search-box">
@@ -716,6 +729,31 @@ function setTab(t){
   document.getElementById('btnAgregar').style.display=t==='catalogo'?'flex':'none';
   renderizar();
 }
+
+// ── MODO SOLO TARJETAS ───────────────────────────────────────────────────────
+let modoSoloTarjetas=false;
+let timeoutOcultarTabs=null;
+
+function toggleModoSoloTarjetas(){
+  modoSoloTarjetas=!modoSoloTarjetas;
+  document.getElementById('appFrame').classList.toggle('modo-solo-tarjetas',modoSoloTarjetas);
+  document.getElementById('btnModoSolo').classList.toggle('activo',modoSoloTarjetas);
+  document.getElementById('tabsBar').classList.remove('tabs-oculto');
+  if(timeoutOcultarTabs){clearTimeout(timeoutOcultarTabs);timeoutOcultarTabs=null;}
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const scrollCont=document.querySelector('.contenido-scroll');
+  const tabsBar=document.getElementById('tabsBar');
+  if(scrollCont&&tabsBar){
+    scrollCont.addEventListener('scroll',()=>{
+      if(!modoSoloTarjetas)return;
+      tabsBar.classList.add('tabs-oculto');
+      if(timeoutOcultarTabs)clearTimeout(timeoutOcultarTabs);
+      timeoutOcultarTabs=setTimeout(()=>{tabsBar.classList.remove('tabs-oculto');},2000);
+    },{passive:true});
+  }
+});
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function anioDeFecha(f){
