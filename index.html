@@ -115,6 +115,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .modo-solo-tarjetas .tab.activo{background:var(--accent);color:white;}
 [data-theme="dark"] .modo-solo-tarjetas .tab.activo{background:#3b82f6;color:white;}
 .modo-solo-tarjetas .tab-texto{display:none;}
+.modo-solo-tarjetas .contenido-scroll{padding-bottom:10px;}
 .modo-solo-tarjetas .tabs.tabs-oculto{max-height:0;opacity:0;padding-top:0;padding-bottom:0;pointer-events:none;}
 .modo-solo-tarjetas .btn-agregar{display:none!important;}
 .btn-config.activo{opacity:0.6;}
@@ -578,7 +579,6 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
           <div class="config-label">🃏 Columnas — Modo Solo Tarjetas</div>
           <div class="config-desc">Cantidad de columnas al girar el celular (horizontal)</div>
           <div class="font-btns" style="margin-top:8px">
-            <button class="font-btn" id="cols-2" onclick="setColumnasSolo(2)">2</button>
             <button class="font-btn" id="cols-3" onclick="setColumnasSolo(3)">3</button>
             <button class="font-btn" id="cols-4" onclick="setColumnasSolo(4)">4</button>
           </div>
@@ -726,7 +726,7 @@ function setFont(size){
 function setColumnasSolo(n){
   document.documentElement.style.setProperty('--cols-solo-landscape',n);
   localStorage.setItem('bip_cols_solo_landscape',n);
-  [2,3,4].forEach(c=>{
+  [3,4].forEach(c=>{
     document.getElementById('cols-'+c).classList.toggle('active',c===n);
   });
 }
@@ -734,7 +734,8 @@ function setColumnasSolo(n){
 function cargarPreferencias(){
   const dark=localStorage.getItem('bip_dark')==='1';
   const font=localStorage.getItem('bip_font')||'normal';
-  const cols=parseInt(localStorage.getItem('bip_cols_solo_landscape'))||3;
+  let cols=parseInt(localStorage.getItem('bip_cols_solo_landscape'))||3;
+  if(cols<3)cols=3;
   if(dark){
     document.getElementById('appFrame').setAttribute('data-theme','dark');
     document.documentElement.setAttribute('data-theme','dark');
