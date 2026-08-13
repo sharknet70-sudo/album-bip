@@ -116,6 +116,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 [data-theme="dark"] .modo-solo-tarjetas .tab.activo{background:#3b82f6;color:white;}
 .modo-solo-tarjetas .tab-texto{display:none;}
 .modo-solo-tarjetas .tabs.tabs-oculto{max-height:0;opacity:0;padding-top:0;padding-bottom:0;pointer-events:none;}
+.modo-solo-tarjetas .btn-agregar{display:none!important;}
 .btn-config.activo{opacity:0.6;}
 
 /* ── TOOLBAR ───────────────────────────────────────────────────────────── */
@@ -355,6 +356,9 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
   .cuadricula{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
   .empty-state{grid-column:1/-1;}
 
+  /* Modo solo tarjetas en horizontal: columnas configurables desde ⚙️ Configuración */
+  .modo-solo-tarjetas .cuadricula{grid-template-columns:repeat(var(--cols-solo-landscape,3),1fr);}
+
   /* Modales con imagen + datos (formulario, física): layout en 2 columnas
      usando column-count, así el contenido fluye solo sin reordenar el DOM,
      y los botones de acción se fuerzan a ancho completo con column-span. */
@@ -569,6 +573,17 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
           </div>
         </div>
       </div>
+      <div class="config-row">
+        <div style="flex:1">
+          <div class="config-label">🃏 Columnas — Modo Solo Tarjetas</div>
+          <div class="config-desc">Cantidad de columnas al girar el celular (horizontal)</div>
+          <div class="font-btns" style="margin-top:8px">
+            <button class="font-btn" id="cols-2" onclick="setColumnasSolo(2)">2</button>
+            <button class="font-btn" id="cols-3" onclick="setColumnasSolo(3)">3</button>
+            <button class="font-btn" id="cols-4" onclick="setColumnasSolo(4)">4</button>
+          </div>
+        </div>
+      </div>
       <p class="seccion-titulo" style="margin-top:16px">Acerca de</p>
       <div class="config-row">
         <div>
@@ -708,15 +723,25 @@ function setFont(size){
   });
 }
 
+function setColumnasSolo(n){
+  document.documentElement.style.setProperty('--cols-solo-landscape',n);
+  localStorage.setItem('bip_cols_solo_landscape',n);
+  [2,3,4].forEach(c=>{
+    document.getElementById('cols-'+c).classList.toggle('active',c===n);
+  });
+}
+
 function cargarPreferencias(){
   const dark=localStorage.getItem('bip_dark')==='1';
   const font=localStorage.getItem('bip_font')||'normal';
+  const cols=parseInt(localStorage.getItem('bip_cols_solo_landscape'))||3;
   if(dark){
     document.getElementById('appFrame').setAttribute('data-theme','dark');
     document.documentElement.setAttribute('data-theme','dark');
     document.getElementById('toggleDark').checked=true;
   }
   setFont(font);
+  setColumnasSolo(cols);
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
