@@ -492,8 +492,29 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
       <p class="seccion-titulo">Datos</p>
       <input type="text" class="caja-texto" id="form-titulo" placeholder="Nombre (Ej: Bip! McDonald's)">
       <label style="font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary);display:block;margin-bottom:4px">Fecha de lanzamiento:</label>
-      <input type="date" class="caja-texto" id="form-fecha">
-      <p class="seccion-titulo">Clasificación</p>
+      <div style="display:flex;gap:8px;margin-bottom:4px">
+        <input type="number" class="caja-texto" id="form-fecha-anio" placeholder="Año" min="2000" max="2100" style="flex:1;min-width:0">
+        <select class="caja-texto" id="form-fecha-mes" style="flex:1;min-width:0">
+          <option value="">Mes (no sé)</option>
+          <option value="01">Enero</option>
+          <option value="02">Febrero</option>
+          <option value="03">Marzo</option>
+          <option value="04">Abril</option>
+          <option value="05">Mayo</option>
+          <option value="06">Junio</option>
+          <option value="07">Julio</option>
+          <option value="08">Agosto</option>
+          <option value="09">Septiembre</option>
+          <option value="10">Octubre</option>
+          <option value="11">Noviembre</option>
+          <option value="12">Diciembre</option>
+        </select>
+        <select class="caja-texto" id="form-fecha-dia" style="flex:1;min-width:0">
+          <option value="">Día (no sé)</option>
+        </select>
+      </div>
+      <p style="font-size:var(--font-size-sm);color:var(--text-secondary);margin:0 0 8px">Si no sabes el mes o el día exacto, déjalos en "no sé".</p>
+      <p class="seccion-titulo">Categoría</p>
       <select class="caja-texto" id="form-tipo">
         <option value="Marca">Marca</option>
         <option value="Pelicula">Película/Serie</option>
@@ -714,7 +735,39 @@ function labelTipo(t){
   const l={Marca:'Marca',Pelicula:'Película/Serie',Personaje:'Personaje',Evento:'Evento',Conmemoracion:'Conmemoración',CampanaSocial:'Campaña Social'};
   return l[t]||t;
 }
-function fmtFecha(f){if(!f)return'Sin fecha';const p=f.split('-');return p.length<3?f:`${p[2]}/${p[1]}/${p[0]}`;}
+const MESES_FECHA=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function fmtFecha(f){
+  if(!f)return'Sin fecha';
+  const p=f.split('-');
+  if(p.length>=3&&p[2])return`${p[2]}/${p[1]}/${p[0]}`;
+  if(p.length>=2&&p[1])return`${MESES_FECHA[parseInt(p[1],10)]} ${p[0]}`;
+  return p[0];
+}
+// Arma el string de fecha (YYYY, YYYY-MM o YYYY-MM-DD) a partir de los 3 selectores del formulario
+function getFormFecha(){
+  const anio=document.getElementById('form-fecha-anio').value.trim();
+  const mes=document.getElementById('form-fecha-mes').value;
+  const dia=document.getElementById('form-fecha-dia').value;
+  if(!anio)return'';
+  let f=anio;
+  if(mes){f+=`-${mes}`;if(dia)f+=`-${dia}`;}
+  return f;
+}
+// Puebla los 3 selectores del formulario a partir de un string de fecha guardado (compatible con fechas completas antiguas)
+function setFormFecha(f){
+  const p=(f||'').split('-');
+  document.getElementById('form-fecha-anio').value=p[0]||'';
+  document.getElementById('form-fecha-mes').value=p[1]||'';
+  document.getElementById('form-fecha-dia').value=p[2]||'';
+}
+function poblarDiasFecha(){
+  const sel=document.getElementById('form-fecha-dia');
+  for(let d=1;d<=31;d++){
+    const v=String(d).padStart(2,'0');
+    sel.insertAdjacentHTML('beforeend',`<option value="${v}">${d}</option>`);
+  }
+}
+poblarDiasFecha();
 
 // ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
 function abrirConfig(){document.getElementById('modal-config').classList.add('activa');}
@@ -1091,7 +1144,7 @@ document.getElementById('btnAgregar').onclick=()=>{
   editId=null;resetCrop('');
   document.getElementById('form-titulo-nav').textContent='Nueva Tarjeta';
   document.getElementById('form-titulo').value='';
-  document.getElementById('form-fecha').value=new Date().toISOString().split('T')[0];
+  setFormFecha(new Date().toISOString().split('T')[0]);
   document.getElementById('form-desc').value='';document.getElementById('form-tipo').value='Evento';document.getElementById('form-no-comercializada').checked=false;document.getElementById('form-retirada').checked=false;
   document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';
   document.getElementById('cropOuter').style.display='none';
@@ -1102,7 +1155,7 @@ function activarEdicion(t){
   editId=t.id;resetCrop('');
   document.getElementById('form-titulo-nav').textContent='Editar Tarjeta';
   document.getElementById('form-titulo').value=t.titulo;
-  document.getElementById('form-fecha').value=t.fecha;
+  setFormFecha(t.fecha);
   document.getElementById('form-tipo').value=t.tipo;
   document.getElementById('form-desc').value=t.descripcion||'';
   document.getElementById('form-no-comercializada').checked=!!t.noComercializada;
@@ -1117,6 +1170,8 @@ document.getElementById('uploadArea').onclick=()=>abrirSelectorImagen(src=>proce
 document.getElementById('btnGuardar').onclick=async()=>{
   const titulo=document.getElementById('form-titulo').value.trim();
   if(!titulo){await mostrarAlerta('Por favor ingresa el nombre de la tarjeta.');return;}
+  const fechaForm=getFormFecha();
+  if(!fechaForm){await mostrarAlerta('Por favor ingresa al menos el año de lanzamiento.');return;}
   const cs=cropStates[''];
   let fi=cs.originalSrc;
   if(cs.originalSrc&&cs.nativeW){
@@ -1125,7 +1180,7 @@ document.getElementById('btnGuardar').onclick=async()=>{
     fi=await doCrop('cropWrap',cs);
   }
   const ex=editId?catalogo.find(x=>x.id===editId):null;
-  const obj={id:editId||Date.now().toString(),titulo,fecha:document.getElementById('form-fecha').value,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:document.getElementById('form-no-comercializada').checked,retirada:document.getElementById('form-retirada').checked,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
+  const obj={id:editId||Date.now().toString(),titulo,fecha:fechaForm,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:document.getElementById('form-no-comercializada').checked,retirada:document.getElementById('form-retirada').checked,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
   if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
   guardarCatalogo();cerrarModal('modal-formulario');renderizar();
 };
