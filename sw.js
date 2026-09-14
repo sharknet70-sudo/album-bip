@@ -1,10 +1,14 @@
 // ── VERSIÓN DEL CACHÉ — cambia este número cada vez que actualices la app ──
-const CACHE_NAME = 'album-bip-v8';
+const CACHE_NAME = 'album-bip-v9';
 
 const ARCHIVOS = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './icons/icon-white-192.png',
+  './icons/icon-white-512.png',
+  './icons/icon-white-maskable-512.png',
+  './icons/apple-touch-icon-white-180.png'
 ];
 
 // Instalación: guarda los archivos en caché pero NO toma control inmediato
