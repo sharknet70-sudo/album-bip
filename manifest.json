@@ -1,6 +1,6 @@
 {
-  "name": "Mi Álbum Bip!",
-  "short_name": "Álbum Bip!",
+  "name": "Coleccionista BIP!",
+  "short_name": "Coleccionista BIP!",
   "description": "Colecciona y organiza tus tarjetas Bip!",
   "start_url": "./index.html",
   "display": "standalone",
