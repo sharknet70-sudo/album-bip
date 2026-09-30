@@ -707,14 +707,16 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 let DB;
 function initDB(){
   return new Promise((res,rej)=>{
-    const req=indexedDB.open('BipAlbum',2);
+    if(!window.indexedDB){rej(new Error('IndexedDB no disponible'));return;}
+    let req;
+    try{req=indexedDB.open('BipAlbum',2);}catch(err){rej(err);return;}
     req.onupgradeneeded=e=>{
       const db=e.target.result;
       if(!db.objectStoreNames.contains('tarjetas'))db.createObjectStore('tarjetas',{keyPath:'id'});
       if(!db.objectStoreNames.contains('fotos'))db.createObjectStore('fotos',{keyPath:'id'});
     };
     req.onsuccess=e=>{DB=e.target.result;res();};
-    req.onerror=()=>rej();
+    req.onerror=()=>rej(req.error||new Error('No se pudo abrir la base de datos'));
   });
 }
 // Ejecuta el trabajo dentro de UNA transacción. Resuelve solo cuando el navegador confirma
@@ -1789,61 +1791,117 @@ function exportarSoloCatalogo(){
 let pendingImportData=null;
 function cerrarSheetImport(){document.getElementById('sheetImportOverlay').classList.remove('activa');pendingImportData=null;}
 
+// Revisa el archivo ANTES de tocar nada. Devuelve datos limpios o lanza un error con mensaje claro.
+function errorValidacion(msg){const e=new Error(msg);e.esValidacion=true;return e;}
+function validarRespaldo(raw){
+  let datosCatalogo,datosFotos=[];
+  if(Array.isArray(raw)){datosCatalogo=raw;} // respaldo antiguo, sin fotos físicas
+  else if(raw&&typeof raw==='object'&&Array.isArray(raw.catalogo)){
+    datosCatalogo=raw.catalogo;
+    datosFotos=Array.isArray(raw.fotos)?raw.fotos:[];
+  }
+  else throw errorValidacion('❌ Este archivo no parece un respaldo de esta app (no trae una lista de tarjetas). No se cambió nada.');
+  if(datosCatalogo.length===0)throw errorValidacion('❌ El respaldo no contiene ninguna tarjeta, así que no se importó nada.');
+  const ids=new Set();
+  datosCatalogo.forEach((t,i)=>{
+    const n=i+1;
+    if(!t||typeof t!=='object'||Array.isArray(t))throw errorValidacion(`❌ El archivo tiene datos dañados: la tarjeta ${n} no es válida. No se cambió nada.`);
+    const idOk=(typeof t.id==='string'&&t.id!=='')||(typeof t.id==='number'&&isFinite(t.id));
+    if(!idOk)throw errorValidacion(`❌ El archivo tiene datos dañados: la tarjeta ${n} no tiene identificador. No se cambió nada.`);
+    if(typeof t.titulo!=='string'||t.titulo.trim()==='')throw errorValidacion(`❌ El archivo tiene datos dañados: la tarjeta ${n} no tiene nombre. No se cambió nada.`);
+    if(t.imgBase64!=null&&typeof t.imgBase64!=='string')throw errorValidacion(`❌ El archivo tiene datos dañados: la imagen de la tarjeta ${n} no es válida. No se cambió nada.`);
+    if(ids.has(t.id))throw errorValidacion(`❌ El archivo tiene tarjetas repetidas (mismo identificador en la tarjeta ${n}). No se cambió nada.`);
+    ids.add(t.id);
+  });
+  // Fotos físicas: solo las que pertenecen a una tarjeta del archivo y tienen datos válidos
+  const vistas=new Set();
+  const fotosValidas=datosFotos.filter(ft=>{
+    if(!ft||typeof ft!=='object'||!ids.has(ft.id)||vistas.has(ft.id))return false;
+    if((ft.front!=null&&typeof ft.front!=='string')||(ft.back!=null&&typeof ft.back!=='string'))return false;
+    vistas.add(ft.id);return true;
+  });
+  return {datosCatalogo,datosFotos:fotosValidas,fotosDescartadas:datosFotos.length-fotosValidas.length};
+}
+
 function importarColeccion(input){
   const f=input.files[0];if(!f)return;
   const r=new FileReader();
   r.onload=async e=>{
-    try{
-      const raw=JSON.parse(e.target.result);
-      let datosCatalogo,datosFotos=[];
-      if(Array.isArray(raw)){datosCatalogo=raw;} // respaldo antiguo, sin fotos físicas
-      else if(raw&&Array.isArray(raw.catalogo)){datosCatalogo=raw.catalogo;datosFotos=Array.isArray(raw.fotos)?raw.fotos:[];}
-      else throw new Error('Formato inválido');
-      pendingImportData={datosCatalogo,datosFotos};
-      document.getElementById('sheetImportOverlay').classList.add('activa');
-    }catch{await mostrarAlerta('❌ El archivo no es válido. Asegúrate de usar un respaldo generado por esta app.');}
     input.value='';
+    let raw;
+    try{raw=JSON.parse(e.target.result);}
+    catch{
+      await mostrarAlerta('❌ El archivo no es válido: no se pudo leer como respaldo. Asegúrate de usar un respaldo generado por esta app. No se cambió nada.');
+      return;
+    }
+    try{
+      pendingImportData=validarRespaldo(raw);
+      document.getElementById('sheetImportOverlay').classList.add('activa');
+    }catch(err){
+      pendingImportData=null;
+      await mostrarAlerta(err&&err.esValidacion?err.message:'❌ El archivo no es válido. Asegúrate de usar un respaldo generado por esta app. No se cambió nada.');
+    }
   };
   r.readAsText(f);
 }
 
 async function ejecutarImportReemplazar(){
   if(!pendingImportData)return;
-  const {datosCatalogo,datosFotos}=pendingImportData;
+  const {datosCatalogo,datosFotos,fotosDescartadas}=pendingImportData;
   cerrarSheetImport();
   const ok=await mostrarConfirm(`¿Reemplazar tu colección actual por las ${datosCatalogo.length} tarjetas de este archivo? Esto borra lo que tengas ahora.`,{destructivo:true,textoAceptar:'Reemplazar'});
   if(!ok)return;
-  catalogo=datosCatalogo;await guardarCatalogo();
-  if(datosFotos.length){
-    await dbClearStore('fotos');
-    for(const ft of datosFotos)await dbPut('fotos',ft);
-  }
+  try{
+    // Todo en una sola transacción: queda todo importado o no cambia nada.
+    await dbTx(['tarjetas','fotos'],'readwrite',tx=>{
+      const st=tx.objectStore('tarjetas'),sf=tx.objectStore('fotos');
+      st.clear();
+      for(const t of datosCatalogo)st.put(t);
+      if(datosFotos.length){
+        sf.clear();
+        for(const ft of datosFotos)sf.put(ft);
+      }else{
+        // El archivo no trae fotos: se conservan solo las de tarjetas que siguen existiendo
+        const vigentes=new Set(datosCatalogo.map(t=>t.id));
+        sf.getAllKeys().onsuccess=e=>{for(const k of e.target.result){if(!vigentes.has(k))sf.delete(k);}};
+      }
+    });
+  }catch(err){await avisarErrorGuardado(err);return;}
+  catalogo=datosCatalogo;respaldarEnLocalStorage();
   renderizar();cerrarModal('modal-config');
-  await mostrarAlerta('✅ Colección reemplazada correctamente.');
+  await mostrarAlerta('✅ Colección reemplazada correctamente.'+(fotosDescartadas?` (Se ignoraron ${fotosDescartadas} foto(s) del archivo que no correspondían a ninguna tarjeta.)`:''));
 }
 
 async function ejecutarImportFusionar(){
   if(!pendingImportData)return;
   const {datosCatalogo,datosFotos}=pendingImportData;
   cerrarSheetImport();
-  const mapaIdViejoNuevo={};
-  let agregadas=0;
+  const copia=[...catalogo];
+  const mapaIdViejoNuevo=Object.create(null);
+  const nuevas=[];
   for(const nueva of datosCatalogo){
-    const yaExiste=catalogo.some(t=>t.titulo===nueva.titulo&&t.fecha===nueva.fecha);
+    const yaExiste=copia.some(t=>t.titulo===nueva.titulo&&t.fecha===nueva.fecha);
     if(!yaExiste){
       const idNuevo=Date.now().toString()+Math.random().toString(36).slice(2,7);
       mapaIdViejoNuevo[nueva.id]=idNuevo;
-      catalogo.push({...nueva,id:idNuevo});
-      agregadas++;
+      const tarjeta={...nueva,id:idNuevo};
+      copia.push(tarjeta);nuevas.push(tarjeta);
     }
   }
-  await guardarCatalogo();
-  // traspasa fotos físicas solo de las tarjetas realmente nuevas
-  if(datosFotos.length){
-    for(const ft of datosFotos){
-      const idNuevo=mapaIdViejoNuevo[ft.id];
-      if(idNuevo)await dbPut('fotos',{...ft,id:idNuevo});
-    }
+  const agregadas=nuevas.length;
+  if(agregadas){
+    try{
+      await dbTx(['tarjetas','fotos'],'readwrite',tx=>{
+        const st=tx.objectStore('tarjetas'),sf=tx.objectStore('fotos');
+        for(const t of nuevas)st.put(t);
+        // traspasa fotos físicas solo de las tarjetas realmente nuevas
+        for(const ft of datosFotos){
+          const idNuevo=mapaIdViejoNuevo[ft.id];
+          if(idNuevo)sf.put({...ft,id:idNuevo});
+        }
+      });
+    }catch(err){await avisarErrorGuardado(err);return;}
+    catalogo=copia;respaldarEnLocalStorage();
   }
   renderizar();cerrarModal('modal-config');
   await mostrarAlerta(agregadas?`✅ Se agregaron ${agregadas} tarjeta(s) nueva(s). Tu colección actual no se tocó.`:'ℹ️ No había tarjetas nuevas para agregar — ya tenías todas.');
@@ -1873,11 +1931,14 @@ async function guardarCatalogo(){
 async function avisarErrorGuardado(err){
   console.error('Error al guardar:',err);
   const sinEspacio=!!err&&err.name==='QuotaExceededError';
-  try{catalogo=await dbGetAll('tarjetas');}catch(e){}
+  let restaurado=false;
+  try{catalogo=await dbGetAll('tarjetas');restaurado=true;}catch(e){}
   renderizar();
   await mostrarAlerta(sinEspacio
     ?'⚠️ No hay espacio suficiente para guardar. Libera espacio en el celular o exporta un respaldo, e inténtalo de nuevo.'
-    :'⚠️ No se pudo guardar el cambio, así que no se aplicó. Exporta un respaldo por si acaso e inténtalo de nuevo.');
+    :(restaurado
+      ?'⚠️ No se pudo guardar el cambio, así que no se aplicó. Exporta un respaldo por si acaso e inténtalo de nuevo.'
+      :'⚠️ No se pudo guardar el cambio y solo se verá en pantalla hasta que cierres la app. Exporta un respaldo si puedes e inténtalo de nuevo.'));
 }
 
 // Guarda UNA tarjeta (crear, editar, marcar, duplicar). Devuelve true si quedó guardada.
@@ -1946,22 +2007,40 @@ function posponerBannerRespaldo(){
 }
 revisarBannerRespaldo();
 
-initDB().then(async()=>{
-  // 1. Intentar cargar desde IndexedDB (fuente principal)
-  const enIDB=await dbGetAll('tarjetas');
-  if(enIDB.length>0){
-    catalogo=enIDB;
-  } else {
-    // 2. Si no hay nada en IDB, migrar desde localStorage
-    const v2=localStorage.getItem('DB_BIP_ALBUM_V2');
-    const v1=localStorage.getItem('DB_BIP_ALBUM');
-    if(v2)catalogo=JSON.parse(v2);
-    else if(v1)catalogo=JSON.parse(v1);
-    // Guardar en IDB para las próximas veces
-    if(catalogo.length>0){try{await guardarCatalogo();}catch(e){console.error(e);}}
+// Lee el respaldo secundario de localStorage (si existe y no está dañado)
+function leerRespaldoLocal(){
+  for(const clave of ['DB_BIP_ALBUM_V2','DB_BIP_ALBUM']){
+    try{
+      const v=localStorage.getItem(clave);
+      if(v){const a=JSON.parse(v);if(Array.isArray(a))return a;}
+    }catch(e){}
+  }
+  return [];
+}
+
+(async()=>{
+  let bdLista=false;
+  try{
+    await initDB();
+    // 1. Intentar cargar desde IndexedDB (fuente principal)
+    const enIDB=await dbGetAll('tarjetas');
+    if(enIDB.length>0){
+      catalogo=enIDB;
+    } else {
+      // 2. Si no hay nada en IDB, migrar desde localStorage
+      catalogo=leerRespaldoLocal();
+      // Guardar en IDB para las próximas veces
+      if(catalogo.length>0){try{await guardarCatalogo();}catch(e){console.error(e);}}
+    }
+    bdLista=true;
+  }catch(err){
+    console.error('No se pudo abrir la base de datos:',err);
+    // Modo limitado: se muestra lo que haya en el respaldo secundario, pero no se puede guardar.
+    catalogo=leerRespaldoLocal();
   }
   renderizar();
-});
+  if(!bdLista)await mostrarAlerta('⚠️ No se pudo abrir la base de datos de este navegador (puede pasar en modo privado, con el almacenamiento lleno o bloqueado). La app abre en modo limitado: verás las tarjetas del respaldo secundario, pero los cambios NO se guardarán.');
+})();
 
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
 // Registro simple: sin auto-reload para no interrumpir la sesión ni perder datos
