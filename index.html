@@ -1202,7 +1202,7 @@ document.getElementById('uploadArea').onclick=()=>abrirSelectorImagen(src=>proce
 
 let guardandoTarjeta=false;
 document.getElementById('btnGuardar').onclick=async()=>{
-  if(guardandoTarjeta)return;
+  if(guardandoTarjeta||!document.getElementById('modal-formulario').classList.contains('activa'))return;
   guardandoTarjeta=true;
   try{await guardarFormularioTarjeta();}finally{guardandoTarjeta=false;}
 };
@@ -1245,7 +1245,7 @@ document.getElementById('uploadBack').onclick=()=>abrirSelectorImagen(src=>proce
 
 let guardandoFisica=false;
 document.getElementById('btnGuardarFisica').onclick=async()=>{
-  if(guardandoFisica)return;
+  if(guardandoFisica||!document.getElementById('modal-fisica').classList.contains('activa'))return;
   guardandoFisica=true;
   try{await guardarFormularioFisica();}finally{guardandoFisica=false;}
 };
