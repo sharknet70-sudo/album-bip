@@ -717,11 +717,28 @@ function initDB(){
     req.onerror=()=>rej();
   });
 }
-function dbPut(store,obj){return new Promise(res=>{const tx=DB.transaction(store,'readwrite');tx.objectStore(store).put(obj).onsuccess=()=>res();});}
-function dbDelete(store,id){return new Promise(res=>{const tx=DB.transaction(store,'readwrite');tx.objectStore(store).delete(id).onsuccess=()=>res();});}
-function dbGet(store,id){return new Promise(res=>{const tx=DB.transaction(store,'readonly');tx.objectStore(store).get(id).onsuccess=e=>res(e.target.result);});}
-function dbGetAll(store){return new Promise(res=>{const tx=DB.transaction(store,'readonly');tx.objectStore(store).getAll().onsuccess=e=>res(e.target.result||[]);});}
-function dbClearStore(store){return new Promise(res=>{const tx=DB.transaction(store,'readwrite');tx.objectStore(store).clear().onsuccess=()=>res();});}
+// Ejecuta el trabajo dentro de UNA transacción. Resuelve solo cuando el navegador confirma
+// que todo quedó guardado (oncomplete). Si algo falla, se cancela todo y se rechaza con el error.
+function dbTx(stores,modo,trabajo){
+  return new Promise((resolve,reject)=>{
+    let tx,req;
+    try{tx=DB.transaction(stores,modo);}catch(err){reject(err);return;}
+    tx.oncomplete=()=>resolve(req?req.result:undefined);
+    tx.onerror=e=>reject((e.target&&e.target.error)||tx.error||new Error('Error en la base de datos'));
+    tx.onabort=()=>reject(tx.error||new Error('Transacción cancelada'));
+    try{req=trabajo(tx);}catch(err){try{tx.abort();}catch(e){}reject(err);}
+  });
+}
+function dbPut(store,obj){return dbTx(store,'readwrite',tx=>tx.objectStore(store).put(obj));}
+function dbDelete(store,id){return dbTx(store,'readwrite',tx=>tx.objectStore(store).delete(id));}
+function dbGet(store,id){return dbTx(store,'readonly',tx=>tx.objectStore(store).get(id));}
+function dbGetAll(store){return dbTx(store,'readonly',tx=>tx.objectStore(store).getAll()).then(r=>r||[]);}
+function dbClearStore(store){return dbTx(store,'readwrite',tx=>tx.objectStore(store).clear());}
+
+// Convierte símbolos especiales (< > & " ') en texto inofensivo antes de meterlos en la página.
+function esc(v){
+  return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let catalogo=[];
@@ -857,13 +874,13 @@ function crearElTarjeta(t,modoRepetidas){
   el.className='tarjeta-bip'+(t.tengo?'':' bloqueada');
   el.onclick=modoRepetidas?()=>verRepetida(t.id):()=>verDetalle(t.id);
   const icono=modoRepetidas?'':(t.tengo?`<div class="check-icono tengo">✔</div>`:`<div class="check-icono no-tengo">🔒</div>`);
-  const badge=modoRepetidas?`<div class="badge-repetida">×${t.repetidas}</div>`:'';
+  const badge=modoRepetidas?`<div class="badge-repetida">×${esc(t.repetidas)}</div>`:'';
   const banner=modoRepetidas?'':(t.retirada?`<div class="banner-estado banner-retirada">Tarjeta Retirada</div>`:(t.noComercializada?`<div class="banner-estado banner-sin-venta">Sin Venta Pública</div>`:''));
   if(t.imgBase64){
-    el.innerHTML=`<img class="bip-thumb" src="${t.imgBase64}" alt="${t.titulo}">${icono}${badge}${banner}<div class="logo-bip">bip!</div>`;
+    el.innerHTML=`<img class="bip-thumb" src="${esc(t.imgBase64)}" alt="${esc(t.titulo)}">${icono}${badge}${banner}<div class="logo-bip">bip!</div>`;
   } else {
     el.style.background=t.tengo?colorTipo(t.tipo):'';
-    el.innerHTML=`<div class="bip-color-bg"><span>${t.titulo}</span></div>${icono}${badge}${banner}<div class="logo-bip">bip!</div>`;
+    el.innerHTML=`<div class="bip-color-bg"><span>${esc(t.titulo)}</span></div>${icono}${badge}${banner}<div class="logo-bip">bip!</div>`;
   }
   return el;
 }
@@ -899,7 +916,7 @@ function renderAcordeonAnios(lista,modoRepetidas){
     const item=document.createElement('div');item.className='acordeon-item'+(abierto?' abierto':'');
     const cab=document.createElement('div');cab.className='acordeon-cabecera';
     cab.onclick=()=>toggleAnio(anio);
-    cab.innerHTML=`<span class="acordeon-flecha">▶</span><span class="acordeon-icono">📅</span><span class="acordeon-nombre">${anio}</span><span class="acordeon-conteo">${tarjetas.length} tarjeta${tarjetas.length===1?'':'s'}</span>`;
+    cab.innerHTML=`<span class="acordeon-flecha">▶</span><span class="acordeon-icono">📅</span><span class="acordeon-nombre">${esc(anio)}</span><span class="acordeon-conteo">${tarjetas.length} tarjeta${tarjetas.length===1?'':'s'}</span>`;
     item.appendChild(cab);
     const body=document.createElement('div');body.className='acordeon-cuerpo';
     if(abierto){
@@ -967,7 +984,7 @@ async function verDetalle(id){
   // imagen catálogo
   const imgDiv=document.createElement('div');imgDiv.className='det-img-wrap';
   if(t.imgBase64){
-    imgDiv.innerHTML=`<img src="${t.imgBase64}" alt="${t.titulo}">`;
+    imgDiv.innerHTML=`<img src="${esc(t.imgBase64)}" alt="${esc(t.titulo)}">`;
     imgDiv.onclick=()=>abrirVisor(t.imgBase64,true);
   }
   else{imgDiv.textContent='Sin imagen de catálogo';imgDiv.style.cursor='default';}
@@ -976,9 +993,9 @@ async function verDetalle(id){
   // info
   const info=document.createElement('div');
   info.innerHTML=`
-    <div class="det-row"><span class="det-label">Categoría</span><span class="det-val"><span class="badge" style="background:${colorTipo(t.tipo)}">${labelTipo(t.tipo)}</span></span></div>
-    <div class="det-row"><span class="det-label">Lanzamiento</span><span class="det-val">${fmtFecha(t.fecha)}</span></div>
-    <div class="det-row"><span class="det-label">Descripción</span><span class="det-val">${t.descripcion||'Sin descripción.'}</span></div>`;
+    <div class="det-row"><span class="det-label">Categoría</span><span class="det-val"><span class="badge" style="background:${colorTipo(t.tipo)}">${esc(labelTipo(t.tipo))}</span></span></div>
+    <div class="det-row"><span class="det-label">Lanzamiento</span><span class="det-val">${esc(fmtFecha(t.fecha))}</span></div>
+    <div class="det-row"><span class="det-label">Descripción</span><span class="det-val">${esc(t.descripcion||'Sin descripción.')}</span></div>`;
   c.appendChild(info);
 
   // física
@@ -991,15 +1008,15 @@ async function verDetalle(id){
       <div class="flip-container" id="flipCard">
         ${(fotos.front||fotos.back)?`<button class="btn-lupa" onclick="event.stopPropagation();abrirVisorFlip()">🔍</button>`:''}
         <div class="flip-inner">
-        <div class="flip-face">${fotos.front?`<img src="${fotos.front}">`:'Frente — sin foto'}</div>
-        <div class="flip-face flip-back">${fotos.back?`<img src="${fotos.back}">`:'Reverso — sin foto'}</div>
+        <div class="flip-face">${fotos.front?`<img src="${esc(fotos.front)}">`:'Frente — sin foto'}</div>
+        <div class="flip-face flip-back">${fotos.back?`<img src="${esc(fotos.back)}">`:'Reverso — sin foto'}</div>
       </div></div>
       <p class="flip-hint">Toca la tarjeta para voltearla</p>
       <div class="flip-btn">
         <button class="active" id="btnLadoF" onclick="setLado('front')">Frente</button>
         <button id="btnLadoB" onclick="setLado('back')">Reverso</button>
       </div>
-      <div class="det-row"><span class="det-label">N° Serie</span><span class="det-val">${t.numSerie||'Sin registrar'}</span></div>`;
+      <div class="det-row"><span class="det-label">N° Serie</span><span class="det-val">${esc(t.numSerie||'Sin registrar')}</span></div>`;
     c.appendChild(bloque);
     document.getElementById('flipCard').onclick=()=>{
       const fc=document.getElementById('flipCard');fc.classList.toggle('flipped');
@@ -1010,10 +1027,14 @@ async function verDetalle(id){
     const bF=document.createElement('button');bF.className='btn-accion btn-outline';bF.textContent='📷 Editar Fotos Físicas';bF.onclick=()=>abrirFisica(t);c.appendChild(bF);
     const bDup=document.createElement('button');bDup.className='btn-accion btn-editar';
     bDup.textContent=t.repetidas?`🔁 Agregar duplicado (tienes ${t.repetidas})`:'🔁 Agregar duplicado';
-    bDup.onclick=()=>{
+    bDup.onclick=async()=>{
       const idx=catalogo.findIndex(x=>x.id===id);
-      if(idx!==-1){catalogo[idx].repetidas=(catalogo[idx].repetidas||0)+1;guardarCatalogo();}
+      if(idx===-1)return;
+      catalogo[idx].repetidas=(catalogo[idx].repetidas||0)+1;
       bDup.textContent=`🔁 Agregar duplicado (tienes ${catalogo[idx].repetidas})`;
+      const ok=await guardarTarjeta(id);
+      const actual=catalogo.find(x=>x.id===id);
+      if(!ok&&actual)bDup.textContent=actual.repetidas?`🔁 Agregar duplicado (tienes ${actual.repetidas})`:'🔁 Agregar duplicado';
     };
     c.appendChild(bDup);
     // BUG FIX: botón quitar siempre funciona correctamente
@@ -1021,7 +1042,10 @@ async function verDetalle(id){
     bQ.onclick=async()=>{
       if(await mostrarConfirm('¿Quitar esta tarjeta de tu colección? Seguirá en el catálogo.')){
         const idx=catalogo.findIndex(x=>x.id===id);
-        if(idx!==-1){catalogo[idx].tengo=false;catalogo[idx].repetidas=0;guardarCatalogo();}
+        if(idx!==-1){
+          catalogo[idx].tengo=false;catalogo[idx].repetidas=0;
+          if(!await guardarTarjeta(id))return;
+        }
         cerrarModal('modal-detalle');renderizar();
       }
     };
@@ -1029,9 +1053,13 @@ async function verDetalle(id){
   } else {
     const b=document.createElement('div');b.className='bloque-bloqueado';b.textContent='No tienes esta tarjeta. Márcala como conseguida para agregar tus fotos físicas.';c.appendChild(b);
     const bC=document.createElement('button');bC.className='btn-accion btn-conseguida';bC.textContent='✅ Marcar como Conseguida';
-    bC.onclick=()=>{
+    bC.onclick=async()=>{
+      bC.disabled=true;
       const idx=catalogo.findIndex(x=>x.id===id);
-      if(idx!==-1){catalogo[idx].tengo=true;guardarCatalogo();}
+      if(idx!==-1){
+        catalogo[idx].tengo=true;
+        if(!await guardarTarjeta(id)){bC.disabled=false;return;}
+      }
       const overlay=document.createElement('div');overlay.className='conseguida-overlay';
       overlay.innerHTML=`<div class="conseguida-burst"><div class="conseguida-circulo"><span>✔</span></div><div class="conseguida-texto">¡Tarjeta conseguida!</div></div>`;
       document.getElementById('appFrame').appendChild(overlay);
@@ -1048,7 +1076,8 @@ async function verDetalle(id){
   bEl.onclick=async()=>{
     if(await mostrarConfirm(`¿Eliminar "${t.titulo}" del catálogo? Esta acción no se puede deshacer.`,{destructivo:true,textoAceptar:'Eliminar'})){
       catalogo=catalogo.filter(x=>x.id!==id);
-      dbDelete('fotos',id);guardarCatalogo();cerrarModal('modal-detalle');renderizar();
+      if(!await eliminarTarjeta(id))return;
+      cerrarModal('modal-detalle');renderizar();
     }
   };
   c.appendChild(bEl);
@@ -1060,14 +1089,14 @@ function verRepetida(id){
   const t=catalogo.find(x=>x.id===id);if(!t)return;
   selId=id;
   const c=document.getElementById('cuerpo-repetida');
-  const imgHtml=t.imgBase64?`<img src="${t.imgBase64}" alt="${t.titulo}">`:'Sin imagen';
+  const imgHtml=t.imgBase64?`<img src="${esc(t.imgBase64)}" alt="${esc(t.titulo)}">`:'Sin imagen';
   c.innerHTML=`
     <div class="det-img-wrap" id="repImgWrap">${imgHtml}</div>
-    <div style="text-align:center;font-weight:bold;font-size:var(--font-size-xl);margin-top:6px;color:var(--text-primary)">${t.titulo}</div>
+    <div style="text-align:center;font-weight:bold;font-size:var(--font-size-xl);margin-top:6px;color:var(--text-primary)">${esc(t.titulo)}</div>
     <p class="seccion-titulo" style="text-align:center;border:none;margin-top:16px">Cantidad de repetidas</p>
     <div class="stepper-repetida">
       <button class="zoom-btn" style="width:44px;height:44px;font-size:22px" onclick="ajustarRepetida(-1)">−</button>
-      <input type="number" id="rep-cantidad" value="${t.repetidas||0}" min="0" onchange="setRepetidaCantidad(this.value)">
+      <input type="number" id="rep-cantidad" value="${esc(t.repetidas||0)}" min="0" onchange="setRepetidaCantidad(this.value)">
       <button class="zoom-btn" style="width:44px;height:44px;font-size:22px" onclick="ajustarRepetida(1)">+</button>
     </div>
     <p style="text-align:center;color:var(--text-tertiary);font-size:var(--font-size-xs)">Si llega a 0, la tarjeta se quita de esta pestaña.</p>`;
@@ -1080,17 +1109,20 @@ function ajustarRepetida(delta){
   setRepetidaCantidad((t.repetidas||0)+delta);
 }
 
-function setRepetidaCantidad(valor){
-  const idx=catalogo.findIndex(x=>x.id===selId);if(idx===-1)return;
+async function setRepetidaCantidad(valor){
+  const id=selId;
+  const idx=catalogo.findIndex(x=>x.id===id);if(idx===-1)return;
   let n=parseInt(valor,10);if(isNaN(n)||n<0)n=0;
   catalogo[idx].repetidas=n;
-  guardarCatalogo();
+  const guardado=guardarTarjeta(id); // empieza a guardar de inmediato
   if(n<=0){
-    cerrarModal('modal-repetida');renderizar();return;
+    cerrarModal('modal-repetida');renderizar();
+  }else{
+    const input=document.getElementById('rep-cantidad');
+    if(input)input.value=n;
+    renderizar();
   }
-  const input=document.getElementById('rep-cantidad');
-  if(input)input.value=n;
-  renderizar();
+  await guardado;
 }
 
 function setLado(lado){
@@ -1168,7 +1200,13 @@ function activarEdicion(t){
 
 document.getElementById('uploadArea').onclick=()=>abrirSelectorImagen(src=>procesarImagenSeleccionada(src,finalSrc=>{cropStates[''].originalSrc=finalSrc;initCrop(finalSrc,'','cropWrap','cropOuter','zoomSlider');}));
 
+let guardandoTarjeta=false;
 document.getElementById('btnGuardar').onclick=async()=>{
+  if(guardandoTarjeta)return;
+  guardandoTarjeta=true;
+  try{await guardarFormularioTarjeta();}finally{guardandoTarjeta=false;}
+};
+async function guardarFormularioTarjeta(){
   const titulo=document.getElementById('form-titulo').value.trim();
   if(!titulo){await mostrarAlerta('Por favor ingresa el nombre de la tarjeta.');return;}
   const fechaForm=getFormFecha();
@@ -1183,8 +1221,9 @@ document.getElementById('btnGuardar').onclick=async()=>{
   const ex=editId?catalogo.find(x=>x.id===editId):null;
   const obj={id:editId||Date.now().toString(),titulo,fecha:fechaForm,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:document.getElementById('form-no-comercializada').checked,retirada:document.getElementById('form-retirada').checked,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
   if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
-  guardarCatalogo();cerrarModal('modal-formulario');renderizar();
-};
+  if(!await guardarTarjeta(obj.id))return;
+  cerrarModal('modal-formulario');renderizar();
+}
 
 // ── FORMULARIO FÍSICA ─────────────────────────────────────────────────────────
 async function abrirFisica(t){
@@ -1204,7 +1243,13 @@ async function abrirFisica(t){
 document.getElementById('uploadFront').onclick=()=>abrirSelectorImagen(src=>procesarImagenSeleccionada(src,finalSrc=>{cropStates['Front'].originalSrc=finalSrc;initCrop(finalSrc,'Front','cropWrapFront','cropOuterFront','zoomFront');}));
 document.getElementById('uploadBack').onclick=()=>abrirSelectorImagen(src=>procesarImagenSeleccionada(src,finalSrc=>{cropStates['Back'].originalSrc=finalSrc;initCrop(finalSrc,'Back','cropWrapBack','cropOuterBack','zoomBack');}));
 
+let guardandoFisica=false;
 document.getElementById('btnGuardarFisica').onclick=async()=>{
+  if(guardandoFisica)return;
+  guardandoFisica=true;
+  try{await guardarFormularioFisica();}finally{guardandoFisica=false;}
+};
+async function guardarFormularioFisica(){
   const t=catalogo.find(x=>x.id===selId);
   t.numSerie=document.getElementById('fisica-serie').value;
   const csF=cropStates['Front'],csB=cropStates['Back'];
@@ -1215,9 +1260,9 @@ document.getElementById('btnGuardarFisica').onclick=async()=>{
   else if(csF.originalSrc)fotos.front=csF.originalSrc;
   if(csB.originalSrc&&csB.nativeW)fotos.back=await doCrop('cropWrapBack',csB);
   else if(csB.originalSrc)fotos.back=csB.originalSrc;
-  await dbPut('fotos',fotos);
-  guardarCatalogo();cerrarModal('modal-fisica');await verDetalle(selId);
-};
+  if(!await guardarFisica(t,fotos))return;
+  cerrarModal('modal-fisica');await verDetalle(selId);
+}
 
 // ── CROP ENGINE ───────────────────────────────────────────────────────────────
 function computeMinScale(cs,ww,wh){
@@ -1708,7 +1753,7 @@ function abrirEstadisticas(){
   });
 
   html+=`<p class="seccion-titulo" style="margin-top:14px">Última conseguida</p>
-    <div style="padding:8px 0;font-size:var(--font-size-base);color:var(--text-primary)">⭐ ${reciente}</div>`;
+    <div style="padding:8px 0;font-size:var(--font-size-base);color:var(--text-primary)">⭐ ${esc(reciente)}</div>`;
 
   document.getElementById('cuerpo-estadisticas').innerHTML=html;
   document.getElementById('modal-estadisticas').classList.add('activa');
@@ -1807,12 +1852,67 @@ document.getElementById('sheetImportFusionar').onclick=ejecutarImportFusionar;
 document.getElementById('sheetImportReemplazar').onclick=ejecutarImportReemplazar;
 
 // ── STORAGE ───────────────────────────────────────────────────────────────────
-async function guardarCatalogo(){
-  // Guarda cada tarjeta en IndexedDB
-  await dbClearStore('tarjetas');
-  for(const t of catalogo) await dbPut('tarjetas',t);
-  // También guarda en localStorage como respaldo secundario
+// Respaldo secundario en localStorage (mejor esfuerzo: si falla, no afecta al guardado principal)
+function respaldarEnLocalStorage(){
   try{localStorage.setItem('DB_BIP_ALBUM_V2',JSON.stringify(catalogo));}catch(e){}
+}
+
+// Guarda TODO el catálogo en una sola transacción: o queda todo guardado o no cambia nada.
+// Se usa al importar y al migrar. Para cambios de una tarjeta se usa guardarTarjeta().
+async function guardarCatalogo(){
+  await dbTx('tarjetas','readwrite',tx=>{
+    const st=tx.objectStore('tarjetas');
+    const vigentes=new Set(catalogo.map(t=>t.id));
+    st.getAllKeys().onsuccess=e=>{for(const k of e.target.result){if(!vigentes.has(k))st.delete(k);}};
+    for(const t of catalogo)st.put(t);
+  });
+  respaldarEnLocalStorage();
+}
+
+// Si algo no se pudo guardar: avisa con un mensaje claro y deja la pantalla igual a lo que hay guardado.
+async function avisarErrorGuardado(err){
+  console.error('Error al guardar:',err);
+  const sinEspacio=!!err&&err.name==='QuotaExceededError';
+  try{catalogo=await dbGetAll('tarjetas');}catch(e){}
+  renderizar();
+  await mostrarAlerta(sinEspacio
+    ?'⚠️ No hay espacio suficiente para guardar. Libera espacio en el celular o exporta un respaldo, e inténtalo de nuevo.'
+    :'⚠️ No se pudo guardar el cambio, así que no se aplicó. Exporta un respaldo por si acaso e inténtalo de nuevo.');
+}
+
+// Guarda UNA tarjeta (crear, editar, marcar, duplicar). Devuelve true si quedó guardada.
+async function guardarTarjeta(id){
+  const t=catalogo.find(x=>x.id===id);
+  if(!t)return false;
+  try{
+    await dbPut('tarjetas',t);
+    respaldarEnLocalStorage();
+    return true;
+  }catch(err){await avisarErrorGuardado(err);return false;}
+}
+
+// Elimina una tarjeta y sus fotos físicas en una sola transacción.
+async function eliminarTarjeta(id){
+  try{
+    await dbTx(['tarjetas','fotos'],'readwrite',tx=>{
+      tx.objectStore('tarjetas').delete(id);
+      tx.objectStore('fotos').delete(id);
+    });
+    respaldarEnLocalStorage();
+    return true;
+  }catch(err){await avisarErrorGuardado(err);return false;}
+}
+
+// Guarda los datos de la tarjeta y sus fotos físicas juntas, en una sola transacción.
+async function guardarFisica(t,fotos){
+  try{
+    await dbTx(['tarjetas','fotos'],'readwrite',tx=>{
+      tx.objectStore('fotos').put(fotos);
+      tx.objectStore('tarjetas').put(t);
+    });
+    respaldarEnLocalStorage();
+    return true;
+  }catch(err){await avisarErrorGuardado(err);return false;}
 }
 function cerrarModal(id){document.getElementById(id).classList.remove('activa');}
 
@@ -1858,7 +1958,7 @@ initDB().then(async()=>{
     if(v2)catalogo=JSON.parse(v2);
     else if(v1)catalogo=JSON.parse(v1);
     // Guardar en IDB para las próximas veces
-    if(catalogo.length>0) await guardarCatalogo();
+    if(catalogo.length>0){try{await guardarCatalogo();}catch(e){console.error(e);}}
   }
   renderizar();
 });
