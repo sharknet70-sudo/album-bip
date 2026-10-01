@@ -703,6 +703,11 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 <canvas id="cropCanvas" style="display:none"></canvas>
 
 <script>
+// ── AJUSTES DE IMAGEN ─────────────────────────────────────────────────────────
+const CALIDAD_JPEG=0.85;        // calidad de la imagen FINAL que se guarda (de 0 a 1)
+const CALIDAD_INTERMEDIA=0.95;  // calidad de copias temporales mientras se edita (evita perder calidad dos veces)
+const MAX_LADO_FOTO=2400;       // fotos más grandes se reducen a este tamaño (píxeles, lado mayor) antes de editarlas
+
 // ── DB ────────────────────────────────────────────────────────────────────────
 let DB;
 function initDB(){
@@ -1398,7 +1403,7 @@ function doCrop(wrapId,cs){
       ctx.translate(-ww/2,-wh/2);
       ctx.drawImage(ni,0,0,ni.naturalWidth,ni.naturalHeight,cs.ox,cs.oy,cs.nativeW*cs.baseX*cs.scale,cs.nativeH*cs.baseY*cs.scale);
       ctx.restore();
-      resolve(canvas.toDataURL('image/jpeg',0.95));
+      resolve(canvas.toDataURL('image/jpeg',CALIDAD_JPEG));
     };
     ni.src=cs.originalSrc;
     if(ni.complete&&ni.naturalWidth)ni.onload();
@@ -1635,6 +1640,30 @@ document.getElementById('sheetGaleria').onclick=()=>{const cb=sheetCb;cerrarShee
 document.getElementById('sheetOverlay').addEventListener('click',e=>{if(e.target.id==='sheetOverlay')cerrarSheet();});
 document.getElementById('sheetImportOverlay').addEventListener('click',e=>{if(e.target.id==='sheetImportOverlay')cerrarSheetImport();});
 
+// Reduce fotos muy grandes (ej. 12 megapíxeles del celular) antes de editarlas.
+// Si la foto ya es más chica que el máximo, la devuelve SIN tocarla. Si algo falla, devuelve la original.
+function reducirImagen(src){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const w=img.naturalWidth,h=img.naturalHeight;
+        const mayor=Math.max(w,h);
+        if(!w||!h||mayor<=MAX_LADO_FOTO){resolve(src);return;}
+        const k=MAX_LADO_FOTO/mayor;
+        const c=document.createElement('canvas');
+        c.width=Math.round(w*k);c.height=Math.round(h*k);
+        const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+        ctx.drawImage(img,0,0,c.width,c.height);
+        // JPEG sigue siendo JPEG; cualquier otro formato (PNG, etc.) queda como PNG para no perder transparencia
+        const esJpeg=/^data:image\/jpe?g/i.test(src);
+        resolve(esJpeg?c.toDataURL('image/jpeg',CALIDAD_INTERMEDIA):c.toDataURL('image/png'));
+      }catch(e){resolve(src);}
+    };
+    img.onerror=()=>resolve(src);
+    img.src=src;
+  });
+}
 // ── FILE ──────────────────────────────────────────────────────────────────────
 // Detecta si hay un margen blanco/transparente pegado a los bordes de una imagen.
 // Devuelve null si no hay margen relevante, o {trimmedSrc} si lo detectó.
@@ -1676,7 +1705,7 @@ function detectarMargen(src){
         if(margen>=MARGEN_MIN_PX&&cropW>20&&cropH>20){
           const c2=document.createElement('canvas');c2.width=cropW;c2.height=cropH;
           c2.getContext('2d').drawImage(c,left,top,cropW,cropH,0,0,cropW,cropH);
-          resolve(c2.toDataURL('image/jpeg',0.95));
+          resolve(c2.toDataURL('image/jpeg',CALIDAD_INTERMEDIA));
           return;
         }
         resolve(null);
@@ -1712,12 +1741,12 @@ async function procesarImagenSeleccionada(src,cb){
 }
 document.getElementById('fileInput').onchange=function(e){
   const f=e.target.files[0];
-  if(f&&pendingFileCb){const r=new FileReader();r.onload=ev=>pendingFileCb(ev.target.result);r.readAsDataURL(f);}
+  if(f&&pendingFileCb){const r=new FileReader();r.onload=async ev=>{const cb=pendingFileCb;const s=await reducirImagen(ev.target.result);if(cb)cb(s);};r.readAsDataURL(f);}
   this.value='';
 };
 document.getElementById('fileInputCamera').onchange=function(e){
   const f=e.target.files[0];
-  if(f&&pendingFileCb){const r=new FileReader();r.onload=ev=>pendingFileCb(ev.target.result);r.readAsDataURL(f);}
+  if(f&&pendingFileCb){const r=new FileReader();r.onload=async ev=>{const cb=pendingFileCb;const s=await reducirImagen(ev.target.result);if(cb)cb(s);};r.readAsDataURL(f);}
   this.value='';
 };
 function pickFile(cb){pendingFileCb=cb;document.getElementById('fileInput').click();}
@@ -1910,9 +1939,13 @@ document.getElementById('sheetImportFusionar').onclick=ejecutarImportFusionar;
 document.getElementById('sheetImportReemplazar').onclick=ejecutarImportReemplazar;
 
 // ── STORAGE ───────────────────────────────────────────────────────────────────
-// Respaldo secundario en localStorage (mejor esfuerzo: si falla, no afecta al guardado principal)
+// Respaldo secundario en localStorage (mejor esfuerzo: si falla, no afecta al guardado principal).
+// Guarda solo los datos de texto, SIN imágenes: así pesa poco y no se pasa del límite (~5 MB) del navegador.
 function respaldarEnLocalStorage(){
-  try{localStorage.setItem('DB_BIP_ALBUM_V2',JSON.stringify(catalogo));}catch(e){}
+  try{
+    const liviano=catalogo.map(t=>{const c={...t};delete c.imgBase64;return c;});
+    localStorage.setItem('DB_BIP_ALBUM_V2',JSON.stringify(liviano));
+  }catch(e){}
 }
 
 // Guarda TODO el catálogo en una sola transacción: o queda todo guardado o no cambia nada.
