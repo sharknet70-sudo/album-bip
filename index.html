@@ -1223,7 +1223,8 @@ async function guardarFormularioTarjeta(){
   if(cs.originalSrc&&cs.nativeW){
     // Aviso de 'no cubre el marco' desactivado a pedido de Karls (falsos positivos por redondeo geométrico).
     // cubreCompleto() se deja intacta por si se quiere reactivar o usar de otra forma más adelante.
-    fi=await doCrop('cropWrap',cs);
+    try{fi=await doCrop('cropWrap',cs);}
+    catch(err){console.error(err);await mostrarAlerta('❌ No se pudo procesar la imagen, así que no se guardó nada. Vuelve a elegir la foto e inténtalo de nuevo.');return;}
   }
   const ex=editId?catalogo.find(x=>x.id===editId):null;
   const obj={id:editId||Date.now().toString(),titulo,fecha:fechaForm,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:document.getElementById('form-no-comercializada').checked,retirada:document.getElementById('form-retirada').checked,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
@@ -1258,15 +1259,18 @@ document.getElementById('btnGuardarFisica').onclick=async()=>{
 };
 async function guardarFormularioFisica(){
   const t=catalogo.find(x=>x.id===selId);
-  t.numSerie=document.getElementById('fisica-serie').value;
+  const nuevaSerie=document.getElementById('fisica-serie').value;
   const csF=cropStates['Front'],csB=cropStates['Back'];
   // Aviso de 'no cubre el marco' (frente) desactivado a pedido de Karls.
   // Aviso de 'no cubre el marco' (reverso) desactivado a pedido de Karls.
   const fotos=await dbGet('fotos',selId)||{id:selId};
-  if(csF.originalSrc&&csF.nativeW)fotos.front=await doCrop('cropWrapFront',csF);
-  else if(csF.originalSrc)fotos.front=csF.originalSrc;
-  if(csB.originalSrc&&csB.nativeW)fotos.back=await doCrop('cropWrapBack',csB);
-  else if(csB.originalSrc)fotos.back=csB.originalSrc;
+  try{
+    if(csF.originalSrc&&csF.nativeW)fotos.front=await doCrop('cropWrapFront',csF);
+    else if(csF.originalSrc)fotos.front=csF.originalSrc;
+    if(csB.originalSrc&&csB.nativeW)fotos.back=await doCrop('cropWrapBack',csB);
+    else if(csB.originalSrc)fotos.back=csB.originalSrc;
+  }catch(err){console.error(err);await mostrarAlerta('❌ No se pudo procesar una de las fotos, así que no se guardó nada. Vuelve a elegirla e inténtalo de nuevo.');return;}
+  t.numSerie=nuevaSerie;
   if(!await guardarFisica(t,fotos))return;
   cerrarModal('modal-fisica');await verDetalle(selId);
 }
@@ -1336,6 +1340,7 @@ function initCrop(src,suffix,wrapId,outerId,sliderId){
     applyTransform(suffix||'',wrapId);
   }
   img.onload=()=>requestAnimationFrame(setupCrop);
+  img.onerror=()=>{document.getElementById(outerId).style.display='none';mostrarAlerta('❌ No se pudo mostrar esta imagen en el editor. Prueba con otra foto.');};
   if(img.complete&&img.naturalWidth)requestAnimationFrame(setupCrop);
 }
 
@@ -1392,8 +1397,9 @@ function doCrop(wrapId,cs){
   const kx=856/ww,ky=540/wh;
   const canvas=document.getElementById('cropCanvas');canvas.width=856;canvas.height=540;
   const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-  return new Promise(resolve=>{
+  return new Promise((resolve,reject)=>{
     const ni=new Image();
+    ni.onerror=()=>reject(new Error('La imagen no se pudo cargar para recortarla'));
     ni.onload=()=>{
       ctx.clearRect(0,0,856,540);
       ctx.save();
@@ -1535,6 +1541,7 @@ function abrirVisor(src,redondeada){
     visorState={scale:fitScale,minScale:fitScale,maxScale:fitScale*6,natW,natH,ox:(bw-natW*fitScale)/2,oy:(bh-natH*fitScale)/2,pointers:new Map(),dragging:false};
     aplicarVisorTransform();
   };
+  img.onerror=()=>{cerrarVisor();mostrarAlerta('❌ No se pudo abrir esta imagen.');};
   if(img.complete&&img.naturalWidth)img.onload();
   document.getElementById('visorOverlay').classList.add('activa');
 }
@@ -1641,7 +1648,8 @@ document.getElementById('sheetOverlay').addEventListener('click',e=>{if(e.target
 document.getElementById('sheetImportOverlay').addEventListener('click',e=>{if(e.target.id==='sheetImportOverlay')cerrarSheetImport();});
 
 // Reduce fotos muy grandes (ej. 12 megapíxeles del celular) antes de editarlas.
-// Si la foto ya es más chica que el máximo, la devuelve SIN tocarla. Si algo falla, devuelve la original.
+// Si la foto ya es más chica que el máximo, la devuelve SIN tocarla. Si no se puede reducir, devuelve la original.
+// Si la imagen no se puede abrir en absoluto (archivo dañado o formato no compatible), devuelve null.
 function reducirImagen(src){
   return new Promise(resolve=>{
     const img=new Image();
@@ -1660,7 +1668,7 @@ function reducirImagen(src){
         resolve(esJpeg?c.toDataURL('image/jpeg',CALIDAD_INTERMEDIA):c.toDataURL('image/png'));
       }catch(e){resolve(src);}
     };
-    img.onerror=()=>resolve(src);
+    img.onerror=()=>resolve(null);
     img.src=src;
   });
 }
@@ -1739,14 +1747,26 @@ async function procesarImagenSeleccionada(src,cb){
   const usar=await confirmarRecorteMargen(trimmed,true);
   cb(usar?trimmed:src);
 }
+const MSG_IMAGEN_NO_ABRE='❌ No se pudo abrir esta imagen (puede estar dañada o ser de un formato que el navegador no lee). Prueba con otra foto.';
+function cargarArchivoImagen(f){
+  const cb=pendingFileCb; // función que recibirá la imagen ya lista
+  const r=new FileReader();
+  r.onload=async ev=>{
+    const s=await reducirImagen(ev.target.result);
+    if(!s){await mostrarAlerta(MSG_IMAGEN_NO_ABRE);return;}
+    if(cb)cb(s);
+  };
+  r.onerror=()=>mostrarAlerta('❌ No se pudo leer ese archivo. Prueba con otra foto.');
+  r.readAsDataURL(f);
+}
 document.getElementById('fileInput').onchange=function(e){
   const f=e.target.files[0];
-  if(f&&pendingFileCb){const r=new FileReader();r.onload=async ev=>{const cb=pendingFileCb;const s=await reducirImagen(ev.target.result);if(cb)cb(s);};r.readAsDataURL(f);}
+  if(f&&pendingFileCb)cargarArchivoImagen(f);
   this.value='';
 };
 document.getElementById('fileInputCamera').onchange=function(e){
   const f=e.target.files[0];
-  if(f&&pendingFileCb){const r=new FileReader();r.onload=async ev=>{const cb=pendingFileCb;const s=await reducirImagen(ev.target.result);if(cb)cb(s);};r.readAsDataURL(f);}
+  if(f&&pendingFileCb)cargarArchivoImagen(f);
   this.value='';
 };
 function pickFile(cb){pendingFileCb=cb;document.getElementById('fileInput').click();}
@@ -1791,30 +1811,84 @@ function abrirEstadisticas(){
 }
 
 // ── EXPORTAR / IMPORTAR ───────────────────────────────────────────────────────
-async function exportarColeccion(){
-  const fotos=await dbGetAll('fotos');
-  const datos=JSON.stringify({version:2,catalogo,fotos},null,2);
-  const blob=new Blob([datos],{type:'application/json'});
+// Genera el texto del respaldo POR PARTES (una tarjeta o una foto a la vez), en vez de un solo texto gigante.
+// El resultado es idéntico a JSON.stringify(objeto,null,2), así que los respaldos siguen siendo compatibles.
+function* partesLista(clave,cantidad,obtener,ultima){
+  const coma=ultima?'':',';
+  if(!cantidad){yield `  "${clave}": []${coma}\n`;return;}
+  yield `  "${clave}": [\n`;
+  for(let i=0;i<cantidad;i++){
+    yield '    '+JSON.stringify(obtener(i),null,2).replace(/\n/g,'\n    ')+(i<cantidad-1?',\n':'\n');
+  }
+  yield `  ]${coma}\n`;
+}
+// obtenerFoto puede ser asíncrona: así las fotos se leen de a una y no todas juntas en memoria
+async function* partesRespaldo(tipo,lista,idsFotos,obtenerFoto){
+  yield '{\n';
+  yield '  "version": 2,\n';
+  if(tipo)yield `  "tipo": ${JSON.stringify(tipo)},\n`;
+  yield* partesLista('catalogo',lista.length,i=>lista[i],false);
+  if(!idsFotos.length){yield '  "fotos": []\n';}
+  else{
+    yield '  "fotos": [\n';
+    for(let i=0;i<idsFotos.length;i++){
+      const foto=await obtenerFoto(idsFotos[i]);
+      yield '    '+JSON.stringify(foto,null,2).replace(/\n/g,'\n    ')+(i<idsFotos.length-1?',\n':'\n');
+    }
+    yield '  ]\n';
+  }
+  yield '}';
+}
+// Va uniendo las partes en un archivo (Blob) sin tener todo el texto junto en memoria
+async function construirBlobRespaldo(tipo,lista,idsFotos,obtenerFoto){
+  let blob=new Blob([],{type:'application/json'});
+  let lote=[],tam=0;
+  const volcar=async()=>{
+    if(!lote.length)return;
+    blob=new Blob([blob,...lote],{type:'application/json'});
+    lote=[];tam=0;
+    await new Promise(r=>setTimeout(r,0)); // deja respirar a la pantalla y al navegador
+  };
+  for await(const parte of partesRespaldo(tipo,lista,idsFotos,obtenerFoto)){
+    lote.push(parte);tam+=parte.length;
+    if(tam>4*1024*1024)await volcar();
+  }
+  await volcar();
+  return blob;
+}
+function descargarBlob(blob,nombre){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  const fecha=new Date().toISOString().split('T')[0];
-  a.href=url;a.download=`album-bip-respaldo-${fecha}.json`;
+  a.href=url;a.download=nombre;
   document.body.appendChild(a);a.click();
-  document.body.removeChild(a);URL.revokeObjectURL(url);
-  try{localStorage.setItem('ULTIMO_EXPORT',Date.now().toString());}catch(e){}
-  ocultarBannerRespaldo();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),60000); // se libera después, para no cortar descargas grandes
 }
 
-function exportarSoloCatalogo(){
-  const soloCatalogo=catalogo.map(t=>({...t,tengo:false,numSerie:'',repetidas:0}));
-  const datos=JSON.stringify({version:2,tipo:'catalogo',catalogo:soloCatalogo,fotos:[]},null,2);
-  const blob=new Blob([datos],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  const fecha=new Date().toISOString().split('T')[0];
-  a.href=url;a.download=`album-bip-catalogo-${fecha}.json`;
-  document.body.appendChild(a);a.click();
-  document.body.removeChild(a);URL.revokeObjectURL(url);
+async function exportarColeccion(){
+  try{
+    const idsFotos=await dbTx('fotos','readonly',tx=>tx.objectStore('fotos').getAllKeys());
+    const blob=await construirBlobRespaldo(null,catalogo,idsFotos||[],async id=>(await dbGet('fotos',id))||{id});
+    const fecha=new Date().toISOString().split('T')[0];
+    descargarBlob(blob,`album-bip-respaldo-${fecha}.json`);
+    try{localStorage.setItem('ULTIMO_EXPORT',Date.now().toString());}catch(e){}
+    ocultarBannerRespaldo();
+  }catch(err){
+    console.error('Error al exportar:',err);
+    await mostrarAlerta('❌ No se pudo preparar el respaldo (puede que falte memoria o espacio en el dispositivo). Tus datos no se tocaron. Inténtalo de nuevo, con otras aplicaciones cerradas.');
+  }
+}
+
+async function exportarSoloCatalogo(){
+  try{
+    const soloCatalogo=catalogo.map(t=>({...t,tengo:false,numSerie:'',repetidas:0}));
+    const blob=await construirBlobRespaldo('catalogo',soloCatalogo,[],null);
+    const fecha=new Date().toISOString().split('T')[0];
+    descargarBlob(blob,`album-bip-catalogo-${fecha}.json`);
+  }catch(err){
+    console.error('Error al exportar el catálogo:',err);
+    await mostrarAlerta('❌ No se pudo preparar el catálogo (puede que falte memoria). Tus datos no se tocaron. Inténtalo de nuevo.');
+  }
 }
 
 let pendingImportData=null;
