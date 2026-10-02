@@ -1,7 +1,7 @@
 {
-  "name": "Coleccionista BIP!",
-  "short_name": "Coleccionista BIP!",
-  "description": "Colecciona y organiza tus tarjetas Bip!",
+  "name": "Coleccionista bip!",
+  "short_name": "Coleccionista bip!",
+  "description": "Colecciona y organiza tus tarjetas bip!",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
