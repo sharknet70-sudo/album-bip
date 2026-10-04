@@ -455,6 +455,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
         <option value="nombre_asc">Nombre A-Z</option>
         <option value="nombre_desc">Nombre Z-A</option>
         <option value="anios_carpetas">Año</option>
+<option value="nro_orden">N° de orden</option>
       </select>
       <label>Categoría:</label>
       <select class="select-filtro" id="filtro-tipo" onchange="renderizar()">
@@ -515,6 +516,9 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
         </select>
       </div>
       <p style="font-size:var(--font-size-sm);color:var(--text-secondary);margin:0 0 8px">Si no sabes el mes o el día exacto, déjalos en "no sé".</p>
+      <label style="font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary);display:block;margin-bottom:4px">N° de orden (opcional):</label>
+      <input type="number" inputmode="numeric" class="caja-texto" id="form-nro-orden" placeholder="Ej: 15" min="1" step="1">
+      <p style="font-size:var(--font-size-sm);color:var(--text-secondary);margin:0 0 8px">Sirve para ordenar las tarjetas en el orden en que salieron. 1 es la primera.</p>
       <p class="seccion-titulo">Categoría</p>
       <select class="caja-texto" id="form-tipo">
         <option value="Marca">Marca</option>
@@ -707,6 +711,24 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 const CALIDAD_JPEG=0.85;        // calidad de la imagen FINAL que se guarda (de 0 a 1)
 const CALIDAD_INTERMEDIA=0.95;  // calidad de copias temporales mientras se edita (evita perder calidad dos veces)
 const MAX_LADO_FOTO=2400;       // fotos más grandes se reducen a este tamaño (píxeles, lado mayor) antes de editarlas
+
+// ── N° DE ORDEN ───────────────────────────────────────────────────────────────
+function tieneNro(t){return typeof t.nroOrden==='number'&&isFinite(t.nroOrden);}
+// Vista "N° de orden" y carpetas de año: las que tienen número van primero (de menor a mayor);
+// las que aún no tienen, después, ordenadas por fecha como siempre.
+function compararPorNro(a,b){
+  const ta=tieneNro(a),tb=tieneNro(b);
+  if(ta&&tb&&a.nroOrden!==b.nroOrden)return a.nroOrden-b.nroOrden;
+  if(ta!==tb)return ta?-1:1;
+  return (new Date(a.fecha)-new Date(b.fecha))||a.titulo.localeCompare(b.titulo);
+}
+// Vistas por fecha: el número solo desempata cuando la fecha es exactamente la misma.
+function desempatePorNro(a,b){
+  const ta=tieneNro(a),tb=tieneNro(b);
+  if(ta&&tb)return a.nroOrden-b.nroOrden;
+  if(ta!==tb)return ta?-1:1;
+  return 0;
+}
 
 // ── DB ────────────────────────────────────────────────────────────────────────
 let DB;
@@ -918,7 +940,7 @@ function renderAcordeonAnios(lista,modoRepetidas){
   }
 
   anios.forEach(anio=>{
-    const tarjetas=[...grupos[anio]].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const tarjetas=[...grupos[anio]].sort(compararPorNro);
     const abierto=aniosAbiertos.has(anio);
     const item=document.createElement('div');item.className='acordeon-item'+(abierto?' abierto':'');
     const cab=document.createElement('div');cab.className='acordeon-cabecera';
@@ -965,8 +987,9 @@ async function renderizar(){
   acordeon.style.display='none';
 
   lista.sort((a,b)=>{
-    if(orden==='fecha_asc')return new Date(a.fecha)-new Date(b.fecha);
-    if(orden==='fecha_desc')return new Date(b.fecha)-new Date(a.fecha);
+    if(orden==='nro_orden')return compararPorNro(a,b);
+    if(orden==='fecha_asc')return (new Date(a.fecha)-new Date(b.fecha))||desempatePorNro(a,b);
+    if(orden==='fecha_desc')return (new Date(b.fecha)-new Date(a.fecha))||desempatePorNro(a,b);
     if(orden==='nombre_asc')return a.titulo.localeCompare(b.titulo);
     return b.titulo.localeCompare(a.titulo);
   });
@@ -1002,6 +1025,7 @@ async function verDetalle(id){
   info.innerHTML=`
     <div class="det-row"><span class="det-label">Categoría</span><span class="det-val"><span class="badge" style="background:${colorTipo(t.tipo)}">${esc(labelTipo(t.tipo))}</span></span></div>
     <div class="det-row"><span class="det-label">Lanzamiento</span><span class="det-val">${esc(fmtFecha(t.fecha))}</span></div>
+    ${tieneNro(t)?`<div class="det-row"><span class="det-label">N° de orden</span><span class="det-val">${esc(t.nroOrden)}</span></div>`:''}
     <div class="det-row"><span class="det-label">Descripción</span><span class="det-val">${esc(t.descripcion||'Sin descripción.')}</span></div>`;
   c.appendChild(info);
 
@@ -1185,7 +1209,7 @@ document.getElementById('btnAgregar').onclick=()=>{
   document.getElementById('form-titulo-nav').textContent='Nueva Tarjeta';
   document.getElementById('form-titulo').value='';
   setFormFecha(new Date().toISOString().split('T')[0]);
-  document.getElementById('form-desc').value='';document.getElementById('form-tipo').value='Evento';document.getElementById('form-no-comercializada').checked=false;document.getElementById('form-retirada').checked=false;
+  document.getElementById('form-desc').value='';document.getElementById('form-nro-orden').value='';document.getElementById('form-tipo').value='Evento';document.getElementById('form-no-comercializada').checked=false;document.getElementById('form-retirada').checked=false;
   document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';
   document.getElementById('cropOuter').style.display='none';
   document.getElementById('modal-formulario').classList.add('activa');
@@ -1198,6 +1222,7 @@ function activarEdicion(t){
   setFormFecha(t.fecha);
   document.getElementById('form-tipo').value=t.tipo;
   document.getElementById('form-desc').value=t.descripcion||'';
+  document.getElementById('form-nro-orden').value=tieneNro(t)?t.nroOrden:'';
   document.getElementById('form-no-comercializada').checked=!!t.noComercializada;
   document.getElementById('form-retirada').checked=!!t.retirada;
   if(t.imgBase64){cropStates[''].originalSrc=t.imgBase64;document.getElementById('uploadArea').textContent='✓ Imagen cargada';setTimeout(()=>initCrop(t.imgBase64,'','cropWrap','cropOuter','zoomSlider'),60);}
@@ -1218,6 +1243,12 @@ async function guardarFormularioTarjeta(){
   if(!titulo){await mostrarAlerta('Por favor ingresa el nombre de la tarjeta.');return;}
   const fechaForm=getFormFecha();
   if(!fechaForm){await mostrarAlerta('Por favor ingresa al menos el año de lanzamiento.');return;}
+  const textoNro=document.getElementById('form-nro-orden').value.trim();
+  let nroOrden=null;
+  if(textoNro!==''){
+    nroOrden=Number(textoNro);
+    if(!Number.isInteger(nroOrden)||nroOrden<1){await mostrarAlerta('El N° de orden debe ser un número entero desde 1 (por ejemplo 15). Si no quieres ponerlo, déjalo vacío.');return;}
+  }
   const cs=cropStates[''];
   let fi=cs.originalSrc;
   if(cs.originalSrc&&cs.nativeW){
@@ -1228,6 +1259,7 @@ async function guardarFormularioTarjeta(){
   }
   const ex=editId?catalogo.find(x=>x.id===editId):null;
   const obj={id:editId||Date.now().toString(),titulo,fecha:fechaForm,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:document.getElementById('form-no-comercializada').checked,retirada:document.getElementById('form-retirada').checked,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
+  if(nroOrden!==null)obj.nroOrden=nroOrden;
   if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
   if(!await guardarTarjeta(obj.id))return;
   cerrarModal('modal-formulario');renderizar();
@@ -1913,6 +1945,7 @@ function validarRespaldo(raw){
     if(!idOk)throw errorValidacion(`❌ El archivo tiene datos dañados: la tarjeta ${n} no tiene identificador. No se cambió nada.`);
     if(typeof t.titulo!=='string'||t.titulo.trim()==='')throw errorValidacion(`❌ El archivo tiene datos dañados: la tarjeta ${n} no tiene nombre. No se cambió nada.`);
     if(t.imgBase64!=null&&typeof t.imgBase64!=='string')throw errorValidacion(`❌ El archivo tiene datos dañados: la imagen de la tarjeta ${n} no es válida. No se cambió nada.`);
+    if(t.nroOrden!=null&&!(typeof t.nroOrden==='number'&&Number.isInteger(t.nroOrden)&&t.nroOrden>=1))delete t.nroOrden;
     if(ids.has(t.id))throw errorValidacion(`❌ El archivo tiene tarjetas repetidas (mismo identificador en la tarjeta ${n}). No se cambió nada.`);
     ids.add(t.id);
   });
