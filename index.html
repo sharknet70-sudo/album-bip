@@ -449,7 +449,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
     </div>
     <div class="filter-row">
       <label>Orden:</label>
-      <select class="select-filtro" id="filtro-orden" onchange="renderizar()">
+      <select class="select-filtro" id="filtro-orden" onchange="guardarOrden();renderizar()">
         <option value="fecha_asc">Fecha (antiguo)</option>
         <option value="fecha_desc">Fecha (reciente)</option>
         <option value="nombre_asc">Nombre A-Z</option>
@@ -712,6 +712,25 @@ const CALIDAD_JPEG=0.85;        // calidad de la imagen FINAL que se guarda (de 
 const CALIDAD_INTERMEDIA=0.95;  // calidad de copias temporales mientras se edita (evita perder calidad dos veces)
 const MAX_LADO_FOTO=2400;       // fotos más grandes se reducen a este tamaño (píxeles, lado mayor) antes de editarlas
 
+// ── AJUSTES A PRUEBA DE FALLOS ────────────────────────────────────────────────
+// Si el navegador bloquea el almacenamiento de ajustes (localStorage), la app sigue funcionando:
+// solo que no recuerda los ajustes entre una vez y otra.
+function lsGet(clave){try{return localStorage.getItem(clave);}catch(e){return null;}}
+function lsSet(clave,valor){try{localStorage.setItem(clave,valor);}catch(e){}}
+
+// ── RECORDAR LA FORMA DE ORDENAR ──────────────────────────────────────────────
+// Guarda la última opción elegida en el selector de orden y la recupera al abrir la app.
+function guardarOrden(){
+  try{localStorage.setItem('bip_orden',document.getElementById('filtro-orden').value);}catch(e){}
+}
+function restaurarOrden(){
+  try{
+    const guardado=localStorage.getItem('bip_orden');
+    const sel=document.getElementById('filtro-orden');
+    if(guardado&&[...sel.options].some(o=>o.value===guardado))sel.value=guardado;
+  }catch(e){}
+}
+
 // ── N° DE ORDEN ───────────────────────────────────────────────────────────────
 function tieneNro(t){return typeof t.nroOrden==='number'&&isFinite(t.nroOrden);}
 // Vista "N° de orden" y carpetas de año: las que tienen número van primero (de menor a mayor);
@@ -822,13 +841,13 @@ function abrirConfig(){document.getElementById('modal-config').classList.add('ac
 function toggleDarkMode(on){
   document.getElementById('appFrame').setAttribute('data-theme',on?'dark':'');
   document.documentElement.setAttribute('data-theme',on?'dark':'');
-  localStorage.setItem('bip_dark',on?'1':'0');
+  lsSet('bip_dark',on?'1':'0');
 }
 
 function setFont(size){
   document.getElementById('appFrame').setAttribute('data-font',size);
   document.documentElement.setAttribute('data-font',size);
-  localStorage.setItem('bip_font',size);
+  lsSet('bip_font',size);
   ['small','normal','large'].forEach(s=>{
     document.getElementById('font-'+s).classList.toggle('active',s===size);
   });
@@ -836,16 +855,16 @@ function setFont(size){
 
 function setColumnasSolo(n){
   document.documentElement.style.setProperty('--cols-solo-landscape',n);
-  localStorage.setItem('bip_cols_solo_landscape',n);
+  lsSet('bip_cols_solo_landscape',n);
   [3,4].forEach(c=>{
     document.getElementById('cols-'+c).classList.toggle('active',c===n);
   });
 }
 
 function cargarPreferencias(){
-  const dark=localStorage.getItem('bip_dark')==='1';
-  const font=localStorage.getItem('bip_font')||'normal';
-  let cols=parseInt(localStorage.getItem('bip_cols_solo_landscape'))||3;
+  const dark=lsGet('bip_dark')==='1';
+  const font=lsGet('bip_font')||'normal';
+  let cols=parseInt(lsGet('bip_cols_solo_landscape'))||3;
   if(cols<3)cols=3;
   if(dark){
     document.getElementById('appFrame').setAttribute('data-theme','dark');
@@ -2178,6 +2197,7 @@ function leerRespaldoLocal(){
     // Modo limitado: se muestra lo que haya en el respaldo secundario, pero no se puede guardar.
     catalogo=leerRespaldoLocal();
   }
+  restaurarOrden();
   renderizar();
   if(!bdLista)await mostrarAlerta('⚠️ No se pudo abrir la base de datos de este navegador (puede pasar en modo privado, con el almacenamiento lleno o bloqueado). La app abre en modo limitado: verás las tarjetas del respaldo secundario, pero los cambios NO se guardarán.');
 })();
