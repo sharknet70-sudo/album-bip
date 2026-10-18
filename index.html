@@ -322,6 +322,9 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 [data-theme="dark"] .dialogo-btns button{color:#3b82f6;}
 [data-theme="dark"] .dialogo-btns button.dialogo-destructivo{color:#ef4444;}
 [data-theme="dark"] .dialogo-btns button.dialogo-secundario{color:var(--text-secondary);}
+.dialogo-box{max-height:90vh;overflow-y:auto;}
+.dialogo-btns.vertical{flex-direction:column;align-items:stretch;gap:6px;}
+.dialogo-btns.vertical button{text-align:left;padding:10px;border:1px solid var(--border2);border-radius:8px;background:var(--bg-secondary);}
 /* ── RESPONSIVE CELULAR ROTADO (landscape) ─────────────────────────────── */
 /* max-height:500px aísla "celular rotado" de una tablet en landscape (que tiene mucho más alto real) */
 /* Este bloque va al FINAL del <style> a propósito: en CSS, con la misma especificidad,
@@ -628,6 +631,9 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
           <div class="config-desc">Versión 2.0 — Datos guardados localmente en tu dispositivo</div>
         </div>
       </div>
+      <p class="seccion-titulo" style="margin-top:16px">Numeración</p>
+      <button class="btn-datos" onclick="numerarPorFecha()">🔢 Numerar por fecha</button>
+      <p style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:4px">Le pone el N° de orden a las tarjetas según su fecha, de la más antigua a la más nueva. Puedes numerar todo o solo las que aún no tienen número. Si no puede saber el lugar de alguna, te pregunta.</p>
       <p class="seccion-titulo" style="margin-top:16px">Mis Datos</p>
       <button class="btn-datos" onclick="exportarColeccion()">📤 Exportar colección (Hacer respaldo)</button>
       <button class="btn-datos" onclick="document.getElementById('importInput').click()">📥 Importar colección (Cargar respaldo)</button>
@@ -747,6 +753,234 @@ function desempatePorNro(a,b){
   if(ta&&tb)return a.nroOrden-b.nroOrden;
   if(ta!==tb)return ta?-1:1;
   return 0;
+}
+
+// ── NUMERAR POR FECHA ─────────────────────────────────────────────────────────
+// Separa una fecha guardada (YYYY, YYYY-MM o YYYY-MM-DD) en año, mes y día. Mes o día = 0 si no se sabe.
+function partesFecha(f){
+  const p=String(f||'').split('-');
+  const y=parseInt(p[0],10);
+  if(!isFinite(y))return null;
+  let m=p[1]?parseInt(p[1],10):0;
+  if(!(m>=1&&m<=12))m=0;
+  let d=(m&&p[2])?parseInt(p[2],10):0;
+  if(!(d>=1&&d<=31))d=0;
+  return {y,m,d};
+}
+// Diálogo con una lista de botones (uno debajo del otro). Devuelve el "valor" del botón que se toque.
+function elegirEnDialogo(mensaje,botones){
+  return new Promise(resolve=>{
+    const overlay=document.getElementById('dialogoOverlay');
+    document.getElementById('dialogoMensaje').textContent=mensaje;
+    const btns=document.getElementById('dialogoBtns');btns.innerHTML='';
+    btns.classList.add('vertical');
+    const cerrar=v=>{overlay.classList.remove('activa');btns.classList.remove('vertical');resolve(v);};
+    botones.forEach(b=>{
+      const el=document.createElement('button');
+      el.textContent=b.texto;
+      if(b.clase)el.className=b.clase;
+      el.onclick=()=>cerrar(b.valor);
+      btns.appendChild(el);
+    });
+    overlay.classList.add('activa');
+  });
+}
+// Botón de Configuración: si ya hay tarjetas con número, deja elegir entre numerar solo las nuevas o todo de cero.
+async function numerarPorFecha(){
+  const total=catalogo.length;
+  if(!total){await mostrarAlerta('Todavía no tienes tarjetas para numerar.');return;}
+  const conNumero=catalogo.filter(tieneNro).length,sinNumero=total-conNumero;
+  if(!conNumero)return numerarTodoDesdeCero(); // no hay nada que respetar
+  const botones=[];
+  if(sinNumero)botones.push({texto:sinNumero===1?'Numerar solo la tarjeta que no tiene número':`Numerar solo las ${sinNumero} tarjetas que no tienen número`,valor:'nuevas'});
+  botones.push({texto:'Numerar todo desde cero (reemplaza todos los números)',valor:'todo'});
+  botones.push({texto:'Cancelar',valor:null,clase:'dialogo-secundario'});
+  const r=await elegirEnDialogo(sinNumero
+    ?`${conNumero} tarjetas ya tienen número y ${sinNumero} no.\n\n¿Qué quieres hacer?`
+    :'Todas tus tarjetas ya tienen número.\n\nSi quieres empezar de nuevo, puedes numerar todo desde cero.',botones);
+  if(r==='nuevas')return numerarSoloSinNumero();
+  if(r==='todo')return numerarTodoDesdeCero();
+}
+
+// Compara la fecha de una tarjeta de la lista (e) con la de una tarjeta nueva (n).
+// -1: e va antes · 1: e va después · 0: empatan · null: no se puede saber (mismo mes y a una de las dos le falta el día).
+function compararFechas(e,n){
+  const a=partesFecha(e.fecha),b=partesFecha(n.fecha);
+  if(!a)return 1;  // las que no tienen fecha van al final de todo
+  if(!b)return -1;
+  if(a.y!==b.y)return a.y<b.y?-1:1;
+  const ma=a.m||13,mb=b.m||13; // las de solo año van al final de ese año
+  if(ma!==mb)return ma<mb?-1:1;
+  if(!a.m)return 0;
+  if(a.d&&b.d)return a.d===b.d?0:(a.d<b.d?-1:1);
+  if(!a.d&&!b.d)return 0;
+  return null;
+}
+
+// Numera solo las tarjetas que no tienen número, respetando el orden de las que ya tienen.
+// Cada tarjeta nueva se ubica según su fecha. Solo pregunta si no puede saber el lugar:
+// porque le falta el día a alguna tarjeta de ese mes, o porque las de alrededor no siguen el orden de fechas.
+// Si cancelas, no cambia nada.
+async function numerarSoloSinNumero(){
+  const lista=catalogo.filter(tieneNro).sort(compararPorNro);
+  const clave=t=>{const f=partesFecha(t.fecha);return f?[f.y,f.m||13,f.d||99]:[9999,13,99];};
+  const nuevas=catalogo.filter(t=>!tieneNro(t)).sort((a,b)=>{
+    const x=clave(a),y=clave(b);
+    return (x[0]-y[0])||(x[1]-y[1])||(x[2]-y[2])||String(a.titulo).localeCompare(String(b.titulo));
+  });
+  const nombre=t=>`«${t.titulo}» (${fmtFecha(t.fecha)}${tieneNro(t)?`, N° ${t.nroOrden}`:''})`;
+  const etiqueta=p=>p===0?`Al principio (antes de ${nombre(lista[0])})`
+    :(p===lista.length?`Al final (después de ${nombre(lista[p-1])})`
+    :`Entre ${nombre(lista[p-1])} y ${nombre(lista[p])}`);
+  let todasAlFinal=false;
+  for(const n of nuevas){
+    if(!partesFecha(n.fecha)){lista.push(n);continue;} // sin fecha: al final de todo
+    const c=lista.map(e=>compararFechas(e,n));
+    // Un lugar es válido si antes de él nada va después de la nueva, y después de él nada va antes (ni empata).
+    const validos=[];
+    for(let p=0;p<=lista.length;p++){
+      let ok=true;
+      for(let i=0;i<p&&ok;i++)if(c[i]===1)ok=false;
+      for(let i=p;i<lista.length&&ok;i++)if(c[i]===-1||c[i]===0)ok=false;
+      if(ok)validos.push(p);
+    }
+    let candidatos=validos;
+    if(!validos.length){
+      // Las tarjetas de alrededor no siguen el orden de fechas: se ofrece solo el tramo desordenado.
+      const pa=c.findIndex(x=>x===1);
+      let pb=-1;
+      for(let i=c.length-1;i>=0;i--){if(c[i]===-1||c[i]===0){pb=i+1;break;}}
+      candidatos=[];
+      for(let p=pa;p<=pb;p++)candidatos.push(p);
+    }
+    let pos;
+    if(candidatos.length===1)pos=candidatos[0];
+    else if(todasAlFinal)pos=candidatos[candidatos.length-1];
+    else{
+      const botones=candidatos.map(p=>({texto:etiqueta(p),valor:p}));
+      botones.push({texto:'Poner todas las que faltan al final de su lugar posible',valor:'fin',clase:'dialogo-secundario'});
+      botones.push({texto:'Cancelar (no cambiar nada)',valor:null,clase:'dialogo-secundario'});
+      const motivo=validos.length
+        ?'no puedo saber su lugar exacto, porque hay tarjetas de ese mes a las que les falta el día.\n\n¿En qué lugar va?'
+        :'no sé bien dónde va, porque las tarjetas de alrededor no siguen el orden de fechas.\n\n¿Entre cuáles la pongo?';
+      const r=await elegirEnDialogo(`«${n.titulo}» (${fmtFecha(n.fecha)}): ${motivo}`,botones);
+      if(r===null)return;
+      if(r==='fin'){todasAlFinal=true;pos=candidatos[candidatos.length-1];}
+      else pos=r;
+    }
+    lista.splice(pos,0,n);
+  }
+  // Numerar (el orden entre las que ya tenían número no cambia; sus números pueden correrse) y guardar todo junto
+  lista.forEach((t,i)=>{t.nroOrden=i+1;});
+  try{await guardarCatalogo();}
+  catch(err){await avisarErrorGuardado(err);return;}
+  renderizar();
+  const filas=nuevas.map(t=>{
+    const i=lista.indexOf(t);
+    const ant=lista[i-1],sig=lista[i+1];
+    const donde=ant&&sig?`, entre «${ant.titulo}» y «${sig.titulo}»`:(sig?`, al principio, antes de «${sig.titulo}»`:(ant?`, al final, después de «${ant.titulo}»`:''));
+    return `• «${t.titulo}» → N° ${i+1}${donde}`;
+  });
+  const mostrar=filas.slice(0,12);
+  if(filas.length>12)mostrar.push(`… y ${filas.length-12} más`);
+  await mostrarAlerta(`✅ Listo: se numeraron ${nuevas.length} ${nuevas.length===1?'tarjeta':'tarjetas'}.\n\n${mostrar.join('\n')}`);
+}
+
+// Numera todas las tarjetas de la más antigua a la más nueva. Antes de numerar, pregunta el lugar de cada
+// tarjeta que solo tiene mes cuando ese mes también tiene tarjetas con día. Si cancelas, no cambia nada.
+async function numerarTodoDesdeCero(){
+  const total=catalogo.length;
+  if(!total){await mostrarAlerta('Todavía no tienes tarjetas para numerar.');return;}
+  const hayNumeros=catalogo.some(tieneNro);
+  const ok=await mostrarConfirm(
+    `Se van a numerar las ${total} tarjetas por fecha, de la más antigua (1) a la más nueva (${total}).`
+    +(hayNumeros?'\n\nLos N° de orden que ya tienes se van a reemplazar.':'')
+    +'\n\n¿Quieres seguir?',{textoAceptar:'Seguir'});
+  if(!ok)return;
+
+  const porTitulo=(a,b)=>String(a.titulo).localeCompare(String(b.titulo));
+  const ordenConDia=(a,b)=>(partesFecha(a.fecha).d-partesFecha(b.fecha).d)||desempatePorNro(a,b)||porTitulo(a,b);
+  const ordenSimple=(a,b)=>desempatePorNro(a,b)||porTitulo(a,b);
+
+  // 1) Agrupar por año y mes
+  const sinFecha=[],porAnio={};
+  for(const t of catalogo){
+    const f=partesFecha(t.fecha);
+    if(!f){sinFecha.push(t);continue;}
+    const a=porAnio[f.y]||(porAnio[f.y]={meses:{},soloAnio:[]});
+    if(!f.m){a.soloAnio.push(t);continue;}
+    const mes=a.meses[f.m]||(a.meses[f.m]={conDia:[],soloMes:[]});
+    (f.d?mes.conDia:mes.soloMes).push(t);
+  }
+  const anios=Object.keys(porAnio).map(Number).sort((x,z)=>x-z);
+  let totalPreguntas=0;
+  for(const y of anios){
+    const a=porAnio[y];
+    a.soloAnio.sort(ordenSimple);
+    for(const m of Object.keys(a.meses)){
+      const mes=a.meses[m];
+      mes.conDia.sort(ordenConDia);mes.soloMes.sort(ordenSimple);
+      if(mes.conDia.length&&mes.soloMes.length)totalPreguntas+=mes.soloMes.length;
+    }
+  }
+  sinFecha.sort(ordenSimple);
+
+  // 2) Preguntar el lugar de cada tarjeta de solo mes que comparte mes con tarjetas que sí tienen día
+  const lugar=new Map(); // id de la tarjeta de solo mes -> cuántas tarjetas con día van antes de ella
+  let todasAlFinal=false,n=0;
+  const nombre=t=>`«${t.titulo}» (${fmtFecha(t.fecha)})`;
+  for(const y of anios){
+    if(todasAlFinal)break;
+    const a=porAnio[y];
+    for(const m of Object.keys(a.meses).map(Number).sort((x,z)=>x-z)){
+      if(todasAlFinal)break;
+      const {conDia,soloMes}=a.meses[m];
+      if(!conDia.length||!soloMes.length)continue;
+      for(const t of soloMes){
+        n++;
+        const botones=[];
+        for(let s=0;s<=conDia.length;s++){
+          let texto;
+          if(s===0)texto=`Antes de ${nombre(conDia[0])}`;
+          else if(s===conDia.length)texto=`Después de ${nombre(conDia[s-1])}`;
+          else texto=`Entre ${nombre(conDia[s-1])} y ${nombre(conDia[s])}`;
+          botones.push({texto,valor:s});
+        }
+        botones.push({texto:'Poner todas las que faltan al final de su mes',valor:'fin',clase:'dialogo-secundario'});
+        botones.push({texto:'Cancelar (no cambiar nada)',valor:null,clase:'dialogo-secundario'});
+        const r=await elegirEnDialogo(
+          `Pregunta ${n} de ${totalPreguntas}\n\n«${t.titulo}» salió en ${fmtFecha(t.fecha)}, pero no tiene día.\n\n¿En qué lugar va dentro de ese mes?`,botones);
+        if(r===null)return;
+        if(r==='fin'){todasAlFinal=true;break;}
+        lugar.set(t.id,r);
+      }
+    }
+  }
+
+  // 3) Armar el orden final: año por año, mes por mes; las de solo año van al final de su año; las sin fecha, al final de todo
+  const orden=[];
+  for(const y of anios){
+    const a=porAnio[y];
+    for(const m of Object.keys(a.meses).map(Number).sort((x,z)=>x-z)){
+      const {conDia,soloMes}=a.meses[m];
+      for(let s=0;s<=conDia.length;s++){
+        for(const t of soloMes){
+          const pos=lugar.has(t.id)?lugar.get(t.id):conDia.length;
+          if(pos===s)orden.push(t);
+        }
+        if(s<conDia.length)orden.push(conDia[s]);
+      }
+    }
+    orden.push(...a.soloAnio);
+  }
+  orden.push(...sinFecha);
+
+  // 4) Numerar y guardar todo junto: o queda todo guardado o no cambia nada
+  orden.forEach((t,i)=>{t.nroOrden=i+1;});
+  try{await guardarCatalogo();}
+  catch(err){await avisarErrorGuardado(err);return;}
+  renderizar();
+  await mostrarAlerta(`✅ Listo: se numeraron ${orden.length} tarjetas, de la 1 a la ${orden.length}.`);
 }
 
 // ── DB ────────────────────────────────────────────────────────────────────────
