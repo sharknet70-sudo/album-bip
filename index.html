@@ -789,7 +789,7 @@ function htmlBarraEstado(clave){
   const e=ESTADOS_TARJETA[clave];
   const tramos=[1,2,3].map(n=>`<i${n<=e.nivel?' class="on"':''}></i>`).join('');
   return `<div class="barra-estado" style="--ce:${e.color}"><div class="barra-estado-tira">${tramos}</div>`
-    +`<div class="barra-estado-txt"><b>Estado: ${esc(e.nombre)}</b><span>${esc(e.desc)}</span></div></div>`;
+    +`<div class="barra-estado-txt"><b>Estado: ${esc(e.nombre)}</b></div></div>`;
 }
 let estadoFisicoSel=null;
 function pintarOpcionesEstado(){
