@@ -325,6 +325,21 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 .dialogo-box{max-height:90vh;overflow-y:auto;}
 .dialogo-btns.vertical{flex-direction:column;align-items:stretch;gap:6px;}
 .dialogo-btns.vertical button{text-align:left;padding:10px;border:1px solid var(--border2);border-radius:8px;background:var(--bg-secondary);}
+/* ── ESTADO DE LA TARJETA FÍSICA ───────────────────────────────────────── */
+.estado-opciones{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.estado-op{display:flex;align-items:center;gap:10px;text-align:left;padding:8px 10px;border:2px solid var(--border2);border-radius:8px;background:var(--bg-card);color:var(--text-primary);cursor:pointer;font-family:inherit;}
+.estado-op .pto{width:14px;height:14px;border-radius:50%;flex-shrink:0;background:var(--ce);}
+.estado-op b{display:block;font-size:var(--font-size-sm);}
+.estado-op small{display:block;font-size:var(--font-size-xs);color:var(--text-secondary);margin-top:1px;}
+.estado-op.sel{border-color:var(--ce);background:var(--bg-secondary);}
+.estado-ayuda{font-size:var(--font-size-xs);color:var(--text-tertiary);margin:4px 0 8px;}
+.barra-estado{margin:0 0 10px;}
+.barra-estado-tira{display:flex;gap:4px;}
+.barra-estado-tira i{flex:1;height:10px;border-radius:5px;background:var(--border2);}
+.barra-estado-tira i.on{background:var(--ce);}
+.barra-estado-txt{margin-top:5px;font-size:var(--font-size-sm);color:var(--text-primary);}
+.barra-estado-txt b{display:block;}
+.barra-estado-txt span{display:block;font-size:var(--font-size-xs);color:var(--text-secondary);margin-top:1px;}
 /* ── RESPONSIVE CELULAR ROTADO (landscape) ─────────────────────────────── */
 /* max-height:500px aísla "celular rotado" de una tablet en landscape (que tiene mucho más alto real) */
 /* Este bloque va al FINAL del <style> a propósito: en CSS, con la misma especificidad,
@@ -563,6 +578,9 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
     <div class="cuerpo-modal">
       <p class="seccion-titulo">Número de Serie</p>
       <div class="num-serie-input"><input type="text" id="fisica-serie" placeholder="Ej: 94830192" maxlength="20"></div>
+      <p class="seccion-titulo">Estado de la tarjeta</p>
+      <div class="estado-opciones" id="estadoOpciones"></div>
+      <p class="estado-ayuda">Toca otra vez la opción elegida para quitarla.</p>
       <p class="seccion-titulo">📸 Frente de la Tarjeta</p>
       <div class="upload-area" id="uploadFront">📂 Subir foto del frente</div>
       <div class="crop-outer" id="cropOuterFront">
@@ -634,6 +652,8 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
       <p class="seccion-titulo" style="margin-top:16px">Numeración</p>
       <button class="btn-datos" onclick="numerarPorFecha()">🔢 Numerar por fecha</button>
       <p style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:4px">Le pone el N° de orden a las tarjetas según su fecha, de la más antigua a la más nueva. Puedes numerar todo o solo las que aún no tienen número. Si no puede saber el lugar de alguna, te pregunta.</p>
+      <button class="btn-datos" onclick="quitarTodosLosNumeros()">🧹 Quitar todos los números</button>
+      <p style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:4px">Le quita el N° de orden a todas las tarjetas. Las tarjetas no se borran, solo pierden su número. No se puede deshacer, así que antes puedes hacer un respaldo.</p>
       <p class="seccion-titulo" style="margin-top:16px">Mis Datos</p>
       <button class="btn-datos" onclick="exportarColeccion()">📤 Exportar colección (Hacer respaldo)</button>
       <button class="btn-datos" onclick="document.getElementById('importInput').click()">📥 Importar colección (Cargar respaldo)</button>
@@ -755,6 +775,43 @@ function desempatePorNro(a,b){
   return 0;
 }
 
+// ── ESTADO DE LA TARJETA FÍSICA ───────────────────────────────────────────────
+// Se guarda en t.estado: 'excelente', 'bueno' o 'danado'. Sin valor = sin estado marcado (no se muestra barra).
+const ESTADOS_TARJETA={
+  excelente:{nombre:'Excelente',nivel:3,color:'#16a34a',desc:'Conserva el brillo del plástico de una tarjeta nueva. La compraste y la guardaste.'},
+  bueno:{nombre:'Buen estado',nivel:2,color:'#eab308',desc:'Está cuidada, pero tiene el desgaste normal del uso (por ejemplo, un pequeño roce en una esquina) y ya no tiene el brillo de nueva.'},
+  danado:{nombre:'Dañada',nivel:1,color:'#dc2626',desc:'No fue bien cuidada: esquinas gastadas, film suelto o roto, picaduras o rayones.'}
+};
+function estadoValido(c){return typeof c==='string'&&Object.prototype.hasOwnProperty.call(ESTADOS_TARJETA,c);}
+// Barra de 3 tramos: se llenan 1, 2 o 3 según el estado, con el color de ese estado.
+function htmlBarraEstado(clave){
+  if(!estadoValido(clave))return '';
+  const e=ESTADOS_TARJETA[clave];
+  const tramos=[1,2,3].map(n=>`<i${n<=e.nivel?' class="on"':''}></i>`).join('');
+  return `<div class="barra-estado" style="--ce:${e.color}"><div class="barra-estado-tira">${tramos}</div>`
+    +`<div class="barra-estado-txt"><b>Estado: ${esc(e.nombre)}</b><span>${esc(e.desc)}</span></div></div>`;
+}
+let estadoFisicoSel=null;
+function pintarOpcionesEstado(){
+  const cont=document.getElementById('estadoOpciones');
+  cont.innerHTML='';
+  for(const clave of ['excelente','bueno','danado']){
+    const e=ESTADOS_TARJETA[clave];
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='estado-op'+(estadoFisicoSel===clave?' sel':'');
+    b.style.setProperty('--ce',e.color);
+    const pto=document.createElement('span');pto.className='pto';
+    const txt=document.createElement('span');
+    const nom=document.createElement('b');nom.textContent=e.nombre;
+    const des=document.createElement('small');des.textContent=e.desc;
+    txt.appendChild(nom);txt.appendChild(des);
+    b.appendChild(pto);b.appendChild(txt);
+    b.onclick=()=>{estadoFisicoSel=(estadoFisicoSel===clave)?null:clave;pintarOpcionesEstado();};
+    cont.appendChild(b);
+  }
+}
+
 // ── NUMERAR POR FECHA ─────────────────────────────────────────────────────────
 // Separa una fecha guardada (YYYY, YYYY-MM o YYYY-MM-DD) en año, mes y día. Mes o día = 0 si no se sabe.
 function partesFecha(f){
@@ -785,6 +842,22 @@ function elegirEnDialogo(mensaje,botones){
     overlay.classList.add('activa');
   });
 }
+// Quita el N° de orden a todas las tarjetas (las tarjetas no se borran). Pide confirmación y guarda todo junto.
+async function quitarTodosLosNumeros(){
+  const conNumero=catalogo.filter(tieneNro);
+  if(!conNumero.length){await mostrarAlerta('Ninguna tarjeta tiene número, así que no hay nada que quitar.');return;}
+  const ok=await mostrarConfirm(
+    `Se le va a quitar el N° de orden a ${conNumero.length===1?'la tarjeta que lo tiene':`las ${conNumero.length} tarjetas que lo tienen`}. Las tarjetas no se borran, solo pierden su número.`
+    +'\n\nNo hay botón para deshacerlo. Si quieres poder volver atrás, haz antes un respaldo con «Exportar colección».\n\n¿Quieres seguir?',
+    {textoAceptar:'Quitar números',destructivo:true});
+  if(!ok)return;
+  for(const t of conNumero)delete t.nroOrden;
+  try{await guardarCatalogo();}
+  catch(err){await avisarErrorGuardado(err);return;}
+  renderizar();
+  await mostrarAlerta(`✅ Listo: se le quitó el número a ${conNumero.length===1?'1 tarjeta':`${conNumero.length} tarjetas`}.`);
+}
+
 // Botón de Configuración: si ya hay tarjetas con número, deja elegir entre numerar solo las nuevas o todo de cero.
 async function numerarPorFecha(){
   const total=catalogo.length;
@@ -1289,6 +1362,7 @@ async function verDetalle(id){
     const bloque=document.createElement('div');bloque.className='bloque-fisico';
     bloque.innerHTML=`
       <div style="font-weight:bold;color:var(--green-dark);margin-bottom:8px;font-size:var(--font-size-sm)">Vista de mi tarjeta física</div>
+      ${htmlBarraEstado(t.estado)}
       <div class="flip-container" id="flipCard">
         ${(fotos.front||fotos.back)?`<button class="btn-lupa" onclick="event.stopPropagation();abrirVisorFlip()">🔍</button>`:''}
         <div class="flip-inner">
@@ -1523,6 +1597,8 @@ async function abrirFisica(t){
   resetCrop('Front');resetCrop('Back');
   const fotos=await dbGet('fotos',t.id)||{};
   document.getElementById('fisica-serie').value=t.numSerie||'';
+  estadoFisicoSel=estadoValido(t.estado)?t.estado:null;
+  pintarOpcionesEstado();
   ['Front','Back'].forEach(lado=>{
     const src=lado==='Front'?fotos.front:fotos.back;
     const ua=document.getElementById('upload'+lado);
@@ -1556,6 +1632,7 @@ async function guardarFormularioFisica(){
     else if(csB.originalSrc)fotos.back=csB.originalSrc;
   }catch(err){console.error(err);await mostrarAlerta('❌ No se pudo procesar una de las fotos, así que no se guardó nada. Vuelve a elegirla e inténtalo de nuevo.');return;}
   t.numSerie=nuevaSerie;
+  if(estadoFisicoSel)t.estado=estadoFisicoSel;else delete t.estado;
   if(!await guardarFisica(t,fotos))return;
   cerrarModal('modal-fisica');await verDetalle(selId);
 }
@@ -2166,7 +2243,7 @@ async function exportarColeccion(){
 
 async function exportarSoloCatalogo(){
   try{
-    const soloCatalogo=catalogo.map(t=>({...t,tengo:false,numSerie:'',repetidas:0}));
+    const soloCatalogo=catalogo.map(t=>{const c={...t,tengo:false,numSerie:'',repetidas:0};delete c.estado;return c;});
     const blob=await construirBlobRespaldo('catalogo',soloCatalogo,[],null);
     const fecha=new Date().toISOString().split('T')[0];
     descargarBlob(blob,`album-bip-catalogo-${fecha}.json`);
@@ -2199,6 +2276,7 @@ function validarRespaldo(raw){
     if(typeof t.titulo!=='string'||t.titulo.trim()==='')throw errorValidacion(`❌ El archivo tiene datos dañados: la tarjeta ${n} no tiene nombre. No se cambió nada.`);
     if(t.imgBase64!=null&&typeof t.imgBase64!=='string')throw errorValidacion(`❌ El archivo tiene datos dañados: la imagen de la tarjeta ${n} no es válida. No se cambió nada.`);
     if(t.nroOrden!=null&&!(typeof t.nroOrden==='number'&&Number.isInteger(t.nroOrden)&&t.nroOrden>=1))delete t.nroOrden;
+    if(t.estado!=null&&!estadoValido(t.estado))delete t.estado;
     if(ids.has(t.id))throw errorValidacion(`❌ El archivo tiene tarjetas repetidas (mismo identificador en la tarjeta ${n}). No se cambió nada.`);
     ids.add(t.id);
   });
