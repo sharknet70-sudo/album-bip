@@ -842,6 +842,33 @@ function elegirEnDialogo(mensaje,botones){
     overlay.classList.add('activa');
   });
 }
+// Si el N° de orden elegido ya lo tiene otra tarjeta, calcula qué tarjetas habría que correr para dejarle el lugar.
+// Devuelve null si no hay conflicto (o si la tarjeta no cambió su número). No modifica nada: solo calcula.
+// - Si la tarjeta sube a un número menor (o no tenía número): las del tramo que ocupa ese lugar pasan al número siguiente,
+//   hasta el primer hueco libre.
+// - Si la tarjeta pasa a un número mayor: las del tramo hasta ese número pasan al número anterior, rellenando el hueco que dejó.
+function calcularCorrimiento(nuevo,idEditada){
+  const otras=catalogo.filter(t=>t.id!==idEditada&&tieneNro(t));
+  const ocupante=otras.filter(t=>t.nroOrden===nuevo).sort(compararPorNro)[0];
+  if(!ocupante)return null;
+  const propia=idEditada?catalogo.find(t=>t.id===idEditada):null;
+  const antes=propia&&tieneNro(propia)?propia.nroOrden:null;
+  if(antes===nuevo)return null;
+  const usados=new Set(otras.map(t=>t.nroOrden));
+  if(antes!==null&&antes<nuevo){
+    let h=nuevo-1;
+    while(h>=1&&usados.has(h))h--;
+    if(h>=1){
+      const movimientos=otras.filter(t=>t.nroOrden>h&&t.nroOrden<=nuevo).map(t=>({t,delta:-1}));
+      return {movimientos,sentido:'atras',desde:h+1,hasta:nuevo,ocupante};
+    }
+  }
+  let g=nuevo;
+  while(usados.has(g))g++;
+  const movimientos=otras.filter(t=>t.nroOrden>=nuevo&&t.nroOrden<g).map(t=>({t,delta:1}));
+  return {movimientos,sentido:'adelante',desde:nuevo,hasta:g-1,ocupante};
+}
+
 // Quita el N° de orden a todas las tarjetas (las tarjetas no se borran). Pide confirmación y guarda todo junto.
 async function quitarTodosLosNumeros(){
   const conNumero=catalogo.filter(tieneNro);
@@ -1576,6 +1603,25 @@ async function guardarFormularioTarjeta(){
     nroOrden=Number(textoNro);
     if(!Number.isInteger(nroOrden)||nroOrden<1){await mostrarAlerta('El N° de orden debe ser un número entero desde 1 (por ejemplo 15). Si no quieres ponerlo, déjalo vacío.');return;}
   }
+  // Si ese N° de orden ya lo tiene otra tarjeta, preguntar si se corren las siguientes para dejarle el lugar
+  let movimientos=[];
+  if(nroOrden!==null){
+    const c=calcularCorrimiento(nroOrden,editId);
+    if(c){
+      const n=c.movimientos.length;
+      const cuantas=`${n} ${n===1?'tarjeta':'tarjetas'}`;
+      const detalle=c.sentido==='adelante'
+        ?`Se correrían ${cuantas}, del N° ${c.desde} al N° ${c.hasta}: cada una pasaría al número siguiente (la ${c.desde} pasaría a ser la ${c.desde+1}).`
+        :`Se correrían ${cuantas}, del N° ${c.desde} al N° ${c.hasta}: cada una pasaría al número anterior (la ${c.desde} pasaría a ser la ${c.desde-1}), para que esta quede en el ${nroOrden}.`;
+      const r=await elegirEnDialogo(
+        `Ya hay una tarjeta con el N° ${nroOrden}: «${c.ocupante.titulo}».\n\n¿Quieres correr las otras tarjetas para dejarle ese lugar?\n\n${detalle}`,
+        [{texto:'Sí, correr los números',valor:'correr'},
+         {texto:`No, dejar el N° ${nroOrden} repetido`,valor:'repetir'},
+         {texto:'Cancelar (volver al formulario)',valor:null,clase:'dialogo-secundario'}]);
+      if(r===null)return;
+      if(r==='correr')movimientos=c.movimientos;
+    }
+  }
   const cs=cropStates[''];
   let fi=cs.originalSrc;
   if(cs.originalSrc&&cs.nativeW){
@@ -1588,7 +1634,8 @@ async function guardarFormularioTarjeta(){
   const obj={id:editId||Date.now().toString(),titulo,fecha:fechaForm,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:document.getElementById('form-no-comercializada').checked,retirada:document.getElementById('form-retirada').checked,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
   if(nroOrden!==null)obj.nroOrden=nroOrden;
   if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
-  if(!await guardarTarjeta(obj.id))return;
+  for(const m of movimientos)m.t.nroOrden+=m.delta;
+  if(!await guardarTarjetas([obj.id,...movimientos.map(m=>m.t.id)]))return;
   cerrarModal('modal-formulario');renderizar();
 }
 
@@ -2418,6 +2465,18 @@ async function guardarTarjeta(id){
   if(!t)return false;
   try{
     await dbPut('tarjetas',t);
+    respaldarEnLocalStorage();
+    return true;
+  }catch(err){await avisarErrorGuardado(err);return false;}
+}
+
+// Guarda varias tarjetas juntas en una sola transacción: o se guardan todas o no se guarda ninguna.
+async function guardarTarjetas(ids){
+  try{
+    await dbTx('tarjetas','readwrite',tx=>{
+      const st=tx.objectStore('tarjetas');
+      for(const id of ids){const t=catalogo.find(x=>x.id===id);if(t)st.put(t);}
+    });
     respaldarEnLocalStorage();
     return true;
   }catch(err){await avisarErrorGuardado(err);return false;}
