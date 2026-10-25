@@ -778,9 +778,9 @@ function desempatePorNro(a,b){
 // ── ESTADO DE LA TARJETA FÍSICA ───────────────────────────────────────────────
 // Se guarda en t.estado: 'excelente', 'bueno' o 'danado'. Sin valor = sin estado marcado (no se muestra barra).
 const ESTADOS_TARJETA={
-  excelente:{nombre:'Excelente',nivel:3,color:'#16a34a',desc:'Conserva el brillo del plástico de una tarjeta nueva. La compraste y la guardaste.'},
-  bueno:{nombre:'Buen estado',nivel:2,color:'#eab308',desc:'Está cuidada, pero tiene el desgaste normal del uso (por ejemplo, un pequeño roce en una esquina) y ya no tiene el brillo de nueva.'},
-  danado:{nombre:'Dañada',nivel:1,color:'#dc2626',desc:'No fue bien cuidada: esquinas gastadas, film suelto o roto, picaduras o rayones.'}
+  excelente:{nombre:'Excelente',nivel:3,color:'#16a34a',desc:'Como nueva: brillo intacto, sin roces, rayas ni marcas, y con los bordes perfectos.'},
+  bueno:{nombre:'Bueno',nivel:2,color:'#eab308',desc:'Tiene desgaste por uso, pero está bien cuidada. Puede tener rayitas leves, alguna picadura pequeña o el film de los bordes un poco gastado. Ya no tiene el brillo de nueva.'},
+  danado:{nombre:'Dañada',nivel:1,color:'#dc2626',desc:'Tiene daños que se ven a simple vista: film despegado o roto, rayas profundas, picaduras notorias o bordes muy gastados o doblados.'}
 };
 function estadoValido(c){return typeof c==='string'&&Object.prototype.hasOwnProperty.call(ESTADOS_TARJETA,c);}
 // Barra de 3 tramos: se llenan 1, 2 o 3 según el estado, con el color de ese estado.
