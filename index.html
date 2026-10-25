@@ -842,6 +842,22 @@ function elegirEnDialogo(mensaje,botones){
     overlay.classList.add('activa');
   });
 }
+// Revisión de la descripción al guardar (Ronda 1). Solo avisa; la persona decide si guarda igual o corrige.
+// Revisa: espacios dobles entre palabras y palabras repetidas seguidas ("color color"). No usa internet ni modifica el texto.
+function revisarDescripcion(texto){
+  const t=texto||'';
+  const avisos=[];
+  for(const m of t.matchAll(/(\S+)( {2,})(\S+)/g)){
+    avisos.push(`Hay ${m[2].length} espacios seguidos entre «${m[1]}» y «${m[3]}».`);
+  }
+  for(const m of t.matchAll(/(?<![\p{L}\p{N}])([\p{L}\p{N}]+)[ \t]+\1(?![\p{L}\p{N}])/giu)){
+    if(/^\d+$/.test(m[1]))continue; // números repetidos (ej. "11 11") no se avisan
+    avisos.push(`La palabra «${m[1]}» está repetida seguida.`);
+  }
+  const MAX=6;
+  if(avisos.length>MAX){const resto=avisos.length-MAX;avisos.length=MAX;avisos.push(`…y ${resto} más.`);}
+  return avisos;
+}
 // Si el N° de orden elegido ya lo tiene otra tarjeta, calcula qué tarjetas habría que correr para dejarle el lugar.
 // Devuelve null si no hay conflicto (o si la tarjeta no cambió su número). No modifica nada: solo calcula.
 // - Si la tarjeta sube a un número menor (o no tenía número): las del tramo que ocupa ese lugar pasan al número siguiente,
@@ -1602,6 +1618,15 @@ async function guardarFormularioTarjeta(){
   if(textoNro!==''){
     nroOrden=Number(textoNro);
     if(!Number.isInteger(nroOrden)||nroOrden<1){await mostrarAlerta('El N° de orden debe ser un número entero desde 1 (por ejemplo 15). Si no quieres ponerlo, déjalo vacío.');return;}
+  }
+  // Revisar la descripción (Ronda 1): si hay algo raro, avisar y dejar elegir. Va antes de preguntar por el N° de orden.
+  const avisosDesc=revisarDescripcion(document.getElementById('form-desc').value);
+  if(avisosDesc.length){
+    const rd=await elegirEnDialogo(
+      'Revisé la descripción y encontré esto:\n\n'+avisosDesc.map(a=>'• '+a).join('\n')+'\n\n¿Qué quieres hacer?',
+      [{texto:'Guardar igual',valor:'guardar'},
+       {texto:'Corregir (volver al formulario)',valor:null,clase:'dialogo-secundario'}]);
+    if(rd===null)return;
   }
   // Si ese N° de orden ya lo tiene otra tarjeta, preguntar si se corren las siguientes para dejarle el lugar
   let movimientos=[];
