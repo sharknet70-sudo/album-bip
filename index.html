@@ -850,8 +850,10 @@ const ERRORES_CONOCIDOS={
   'aplicandose':'aplicándose','pudu':'pudú','bibliografíca':'biográfica o bibliográfica'
 };
 // Revisión de la descripción al guardar (Ronda 1). Solo avisa; la persona decide si guarda igual o corrige.
-// Revisa: espacios dobles entre palabras, palabras repetidas seguidas ("color color") y errores conocidos (tabla de arriba). No usa internet ni modifica el texto.
-function revisarDescripcion(texto){
+// Revisa: espacios dobles, palabras repetidas seguidas ("color color"), errores conocidos (tabla de arriba) y reglas de la guía de redacción
+// (empezar con «Tarjeta», máximo ~450 caracteres, nada que dependa de cuándo se lea, «bip!» y «Comic-Con» bien escritos, sin repetir texto de otra tarjeta).
+// idActual = id de la tarjeta que se está editando (para no compararla consigo misma). No usa internet ni modifica el texto.
+function revisarDescripcion(texto,idActual){
   const t=texto||'';
   const avisos=[];
   for(const m of t.matchAll(/(\S+)( {2,})(\S+)/g)){
@@ -869,6 +871,27 @@ function revisarDescripcion(texto){
     let sug=ERRORES_CONOCIDOS[clave];
     if(w[0]!==w[0].toLowerCase())sug=sug[0].toUpperCase()+sug.slice(1);
     avisos.push(`«${w}» parece mal escrita; ¿quisiste decir «${sug}»?`);
+  }
+  // Reglas de la guía (Ronda 3). Solo si hay texto.
+  const tt=t.trim();
+  if(tt){
+    if(!/^Tarjeta\b/i.test(tt))avisos.push('No empieza con «Tarjeta» (regla 1 de la guía).');
+    if(tt.length>450)avisos.push(`Tiene ${tt.length} caracteres; el máximo de la guía es unos 450.`);
+    const rel=new Set();
+    for(const m of tt.matchAll(/\beste año\b|\bpróxim[oa]s?\b|\besperad[oa]s?\b/gi)){
+      const k=m[0].toLowerCase();if(rel.has(k))continue;rel.add(k);
+      avisos.push(`«${m[0]}» depende de cuándo se lea; mejor poner el año o quitar la palabra.`);
+    }
+    if(/\bBip!/.test(tt)||/\bbip\b(?!!)/i.test(tt))avisos.push('Escribe «bip!» siempre en minúscula y con el signo de exclamación.');
+    if(/\bComic Con\b/i.test(tt))avisos.push('Escribe «Comic-Con» con guion.');
+    if(typeof catalogo!=='undefined'){
+      const norm=x=>(x||'').trim().replace(/\s+/g,' ').toLowerCase();
+      const igual=catalogo.filter(o=>o.id!==idActual&&norm(o.descripcion)===norm(tt));
+      if(igual.length){
+        const mas=igual.length>1?` (y ${igual.length-1} más)`:'';
+        avisos.push(`Es igual a la descripción de «${igual[0].titulo}»${mas}. El texto propio de cada diseño no debe repetirse.`);
+      }
+    }
   }
   const MAX=6;
   if(avisos.length>MAX){const resto=avisos.length-MAX;avisos.length=MAX;avisos.push(`…y ${resto} más.`);}
@@ -1636,7 +1659,7 @@ async function guardarFormularioTarjeta(){
     if(!Number.isInteger(nroOrden)||nroOrden<1){await mostrarAlerta('El N° de orden debe ser un número entero desde 1 (por ejemplo 15). Si no quieres ponerlo, déjalo vacío.');return;}
   }
   // Revisar la descripción (Ronda 1): si hay algo raro, avisar y dejar elegir. Va antes de preguntar por el N° de orden.
-  const avisosDesc=revisarDescripcion(document.getElementById('form-desc').value);
+  const avisosDesc=revisarDescripcion(document.getElementById('form-desc').value,editId);
   if(avisosDesc.length){
     const rd=await elegirEnDialogo(
       'Revisé la descripción y encontré esto:\n\n'+avisosDesc.map(a=>'• '+a).join('\n')+'\n\n¿Qué quieres hacer?',
