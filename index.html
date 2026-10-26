@@ -842,8 +842,15 @@ function elegirEnDialogo(mensaje,botones){
     overlay.classList.add('activa');
   });
 }
+// Errores conocidos (Ronda 2): palabras que casi siempre están mal escritas, con su corrección sugerida.
+// Solo van palabras que casi nunca son correctas; las que a veces sí lo son ("publico", "hacia", "cuidad") quedan fuera a propósito.
+const ERRORES_CONOCIDOS={
+  'dia':'día','dias':'días','mas':'más','linea':'línea','simultanea':'simultánea',
+  'especifico':'específico','orígen':'origen','psicodelico':'psicodélico',
+  'aplicandose':'aplicándose','pudu':'pudú','bibliografíca':'biográfica o bibliográfica'
+};
 // Revisión de la descripción al guardar (Ronda 1). Solo avisa; la persona decide si guarda igual o corrige.
-// Revisa: espacios dobles entre palabras y palabras repetidas seguidas ("color color"). No usa internet ni modifica el texto.
+// Revisa: espacios dobles entre palabras, palabras repetidas seguidas ("color color") y errores conocidos (tabla de arriba). No usa internet ni modifica el texto.
 function revisarDescripcion(texto){
   const t=texto||'';
   const avisos=[];
@@ -853,6 +860,15 @@ function revisarDescripcion(texto){
   for(const m of t.matchAll(/(?<![\p{L}\p{N}])([\p{L}\p{N}]+)[ \t]+\1(?![\p{L}\p{N}])/giu)){
     if(/^\d+$/.test(m[1]))continue; // números repetidos (ej. "11 11") no se avisan
     avisos.push(`La palabra «${m[1]}» está repetida seguida.`);
+  }
+  const vistas=new Set();
+  for(const m of t.matchAll(/(?<![\p{L}\p{N}])[\p{L}\p{N}]+(?![\p{L}\p{N}])/gu)){
+    const w=m[0], clave=w.toLowerCase();
+    if(vistas.has(clave)||!Object.prototype.hasOwnProperty.call(ERRORES_CONOCIDOS,clave))continue;
+    vistas.add(clave);
+    let sug=ERRORES_CONOCIDOS[clave];
+    if(w[0]!==w[0].toLowerCase())sug=sug[0].toUpperCase()+sug.slice(1);
+    avisos.push(`«${w}» parece mal escrita; ¿quisiste decir «${sug}»?`);
   }
   const MAX=6;
   if(avisos.length>MAX){const resto=avisos.length-MAX;avisos.length=MAX;avisos.push(`…y ${resto} más.`);}
