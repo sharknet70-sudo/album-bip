@@ -660,6 +660,10 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
       <input type="file" id="importInput" accept=".json" style="display:none" onchange="importarColeccion(this)">
       <button class="btn-datos" onclick="exportarSoloCatalogo()">📚 Compartir solo el catálogo</button>
       <p style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:4px">Genera un archivo con las tarjetas del catálogo (sin marcar cuáles tienes, sin fotos físicas), ideal para pasarle la app a otra persona.</p>
+      <p class="seccion-titulo" style="margin-top:16px">Herramienta de una sola vez</p>
+      <button class="btn-datos" onclick="document.getElementById('corrInput').click()">🛠️ Aplicar correcciones de textos</button>
+      <input type="file" id="corrInput" accept=".json" style="display:none" onchange="aplicarCorreccionesTextos(this)">
+      <p style="font-size:var(--font-size-xs);color:var(--text-tertiary);margin-top:4px">Carga un archivo de correcciones y cambia solo las descripciones (y los títulos, si el archivo los trae) de las tarjetas que coinciden. No toca fotos, «tengo», números de serie ni estado. Se puede borrar de la app cuando termine.</p>
     </div>
   </div>
 
@@ -925,6 +929,45 @@ function calcularCorrimiento(nuevo,idEditada){
 }
 
 // Quita el N° de orden a todas las tarjetas (las tarjetas no se borran). Pide confirmación y guarda todo junto.
+// Herramienta de una sola vez: carga un archivo pequeño de correcciones y cambia SOLO la descripción (y el título, si el archivo lo trae)
+// de las tarjetas que coinciden por id. No toca fotos, «tengo», números de serie, estado ni nada más. Se puede borrar cuando termine.
+function aplicarCorreccionesTextos(input){
+  const file=input.files&&input.files[0];
+  input.value='';
+  if(!file)return;
+  const rd=new FileReader();
+  rd.onerror=()=>{mostrarAlerta('No pude leer el archivo.');};
+  rd.onload=async()=>{
+    let datos;
+    try{datos=JSON.parse(rd.result);}catch(e){await mostrarAlerta('No pude leer el archivo: no es un archivo de correcciones válido.');return;}
+    const lista=(datos&&datos.tipo==='correcciones-textos'&&Array.isArray(datos.cambios))?datos.cambios:null;
+    if(!lista){await mostrarAlerta('Este archivo no es un archivo de correcciones de textos.');return;}
+    const aplicar=[];let sinTarjeta=0;
+    for(const c of lista){
+      const t=catalogo.find(x=>String(x.id)===String(c.id));
+      if(!t){sinTarjeta++;continue;}
+      const desc=(typeof c.descripcion==='string'&&c.descripcion!==(t.descripcion||''))?c.descripcion:null;
+      const tit=(typeof c.titulo==='string'&&c.titulo!==t.titulo)?c.titulo:null;
+      if(desc!==null||tit!==null)aplicar.push({t,desc,tit});
+    }
+    const aviso=sinTarjeta?`\n\n${sinTarjeta===1?'1 tarjeta del archivo no existe':`${sinTarjeta} tarjetas del archivo no existen`} en tu catálogo y se ignora.`:'';
+    if(!aplicar.length){await mostrarAlerta('No hay nada que cambiar: tus descripciones y títulos ya coinciden con el archivo.'+aviso);return;}
+    const nd=aplicar.filter(a=>a.desc!==null).length,nt=aplicar.filter(a=>a.tit!==null).length;
+    const ok=await mostrarConfirm(
+      `Se van a cambiar ${nd} ${nd===1?'descripción':'descripciones'}${nt?` y ${nt} ${nt===1?'título':'títulos'}`:''}. No se toca nada más: ni fotos, ni «tengo», ni números de serie, ni estado.`
+      +aviso+'\n\nNo hay botón para deshacerlo. Si quieres poder volver atrás, haz antes un respaldo con «Exportar colección».\n\n¿Quieres seguir?',
+      {textoAceptar:'Aplicar cambios'});
+    if(!ok)return;
+    const previos=aplicar.map(a=>({t:a.t,d:a.t.descripcion,ti:a.t.titulo}));
+    for(const a of aplicar){if(a.desc!==null)a.t.descripcion=a.desc;if(a.tit!==null)a.t.titulo=a.tit;}
+    const guardado=await guardarTarjetas(aplicar.map(a=>a.t.id));
+    if(!guardado){for(const p of previos){p.t.descripcion=p.d;p.t.titulo=p.ti;}renderizar();return;}
+    renderizar();
+    await mostrarAlerta(`✅ Listo: se aplicaron los cambios en ${aplicar.length} ${aplicar.length===1?'tarjeta':'tarjetas'}.`);
+  };
+  rd.readAsText(file);
+}
+
 async function quitarTodosLosNumeros(){
   const conNumero=catalogo.filter(tieneNro);
   if(!conNumero.length){await mostrarAlerta('Ninguna tarjeta tiene número, así que no hay nada que quitar.');return;}
