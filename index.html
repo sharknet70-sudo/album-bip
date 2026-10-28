@@ -576,8 +576,6 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
       <span>Mi Tarjeta Física</span>
     </div>
     <div class="cuerpo-modal">
-      <p class="seccion-titulo">Número de Serie</p>
-      <div class="num-serie-input"><input type="text" id="fisica-serie" placeholder="Ej: 94830192" maxlength="20"></div>
       <p class="seccion-titulo">Estado de la tarjeta</p>
       <div class="estado-opciones" id="estadoOpciones"></div>
       <p class="estado-ayuda">Toca otra vez la opción elegida para quitarla.</p>
@@ -599,6 +597,8 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
         <div class="rotate-controls"><label>Girar</label><button type="button" class="rot-btn" data-suffix="Back" data-dir="-90">⟲ 90°</button><button type="button" class="rot-btn" data-suffix="Back" data-dir="90">⟳ 90°</button></div>
         <div class="rotate-controls"><label>Nivelar</label><input type="range" class="level-slider" data-suffix="Back" min="-15" max="15" step="0.5" value="0"></div>
       </div>
+      <p class="seccion-titulo">Número de Serie</p>
+      <div class="num-serie-input"><input type="text" id="fisica-serie" placeholder="Ej: 94830192" maxlength="20"></div>
       <button class="btn-accion btn-guardar" id="btnGuardarFisica">💾 Guardar Tarjeta Física</button>
     </div>
   </div>
@@ -778,9 +778,9 @@ function desempatePorNro(a,b){
 // ── ESTADO DE LA TARJETA FÍSICA ───────────────────────────────────────────────
 // Se guarda en t.estado: 'excelente', 'bueno' o 'danado'. Sin valor = sin estado marcado (no se muestra barra).
 const ESTADOS_TARJETA={
-  excelente:{nombre:'Excelente',nivel:3,color:'#16a34a',desc:'Como nueva: brillo intacto, sin roces, rayas ni marcas, y con los bordes perfectos.'},
-  bueno:{nombre:'Bueno',nivel:2,color:'#eab308',desc:'Tiene desgaste por uso, pero está bien cuidada. Puede tener rayitas leves, alguna picadura pequeña o el film de los bordes un poco gastado. Ya no tiene el brillo de nueva.'},
-  danado:{nombre:'Dañada',nivel:1,color:'#dc2626',desc:'Tiene daños que se ven a simple vista: film despegado o roto, rayas profundas, picaduras notorias o bordes muy gastados o doblados.'}
+  excelente:{nombre:'Excelente',nivel:3,color:'#16a34a',desc:'Como nueva: brillo intacto, sin desgaste, rayas ni marcas, y con los bordes perfectos.'},
+  bueno:{nombre:'Bueno',nivel:2,color:'#eab308',desc:'Tiene desgaste por uso, pero está bien cuidada. Puede tener rayas leves, alguna picadura pequeña o el film de los bordes un poco gastado. Ya no tiene el brillo de nueva.'},
+  danado:{nombre:'Dañada',nivel:1,color:'#dc2626',desc:'Tiene daños que se ven a simple vista: film despegado o roto, rayas profundas, picaduras notorias o bordes muy gastados. La tarjeta puede estar doblada o incluso trizada.'}
 };
 function estadoValido(c){return typeof c==='string'&&Object.prototype.hasOwnProperty.call(ESTADOS_TARJETA,c);}
 // Barra de 3 tramos: se llenan 1, 2 o 3 según el estado, con el color de ese estado.
