@@ -1227,10 +1227,18 @@ poblarDiasFecha();
 // ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
 function abrirConfig(){document.getElementById('modal-config').classList.add('activa');}
 
+// Color de las barras del sistema (la de la hora arriba y la de los botones abajo): el mismo del encabezado del modo activo.
+function actualizarColorBarras(){
+  const color=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta&&color)meta.setAttribute('content',color);
+}
+
 function toggleDarkMode(on){
   document.getElementById('appFrame').setAttribute('data-theme',on?'dark':'');
   document.documentElement.setAttribute('data-theme',on?'dark':'');
   lsSet('bip_dark',on?'1':'0');
+  actualizarColorBarras();
 }
 
 function setFont(size){
@@ -1262,6 +1270,7 @@ function cargarPreferencias(){
   }
   setFont(font);
   setColumnasSolo(cols);
+  actualizarColorBarras();
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
