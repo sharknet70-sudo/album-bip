@@ -295,9 +295,18 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
 /* ── REPETIDAS ─────────────────────────────────────────────────────────── */
 .badge-repetida{position:absolute;top:5px;right:6px;background:rgba(245,158,11,0.9);color:white;font-size:13px;font-weight:bold;border-radius:12px;padding:3px 8px;}
 .badge-no-comercializada{position:absolute;bottom:5px;left:5px;background:rgba(100,116,139,0.92);color:white;font-size:10px;font-weight:bold;border-radius:8px;padding:2px 7px;text-transform:uppercase;letter-spacing:0.3px;}
-.banner-estado{position:absolute;bottom:0;left:0;right:0;text-align:center;color:#fff;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;padding:4px 4px;text-shadow:0 1px 2px rgba(0,0,0,0.4);}
+.banner-estado{position:absolute;bottom:0;left:0;right:0;text-align:center;color:#fff;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;padding:4px 4px;text-shadow:0 1px 2px rgba(0,0,0,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .banner-sin-venta{background:rgba(184,134,11,0.88);}
 .banner-retirada{background:rgba(220,38,38,0.85);}
+.franja-resumen{display:none;margin:8px 0;}
+.franja-resumen.activa{display:block;}
+.franja-chip{display:inline-block;max-width:100%;padding:4px 12px;border-radius:8px;color:#fff;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:top;}
+.franja-atajos{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;}
+.franja-atajos button{border:1px solid var(--border2);background:var(--bg-secondary);color:var(--text-primary);border-radius:16px;padding:5px 10px;font-size:var(--font-size-xs);font-weight:bold;cursor:pointer;}
+.franja-colores{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;}
+.franja-color{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer;padding:0;}
+.franja-color.sel{border-color:var(--text-primary);}
+.franja-vista-tarjeta{position:relative;height:56px;border-radius:10px;overflow:hidden;background:var(--bg-secondary);border:1px solid var(--border2);}
 .stepper-repetida{display:flex;align-items:center;justify-content:center;gap:16px;margin:24px 0;}
 .stepper-repetida input{width:70px;text-align:center;font-size:26px;font-weight:bold;border:1px solid var(--border2);border-radius:8px;padding:6px;background:var(--bg-card);color:var(--text-primary);}
 
@@ -546,14 +555,9 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
         <option value="Conmemoracion">Conmemoración</option>
         <option value="CampanaSocial">Campaña Social</option>
       </select>
-      <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary)">
-        <input type="checkbox" id="form-no-comercializada" style="width:18px;height:18px">
-        SIN VENTA PÚBLICA
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:var(--font-size-sm);font-weight:bold;color:var(--text-secondary)">
-        <input type="checkbox" id="form-retirada" style="width:18px;height:18px">
-        TARJETA RETIRADA
-      </label>
+      <p class="seccion-titulo">Franja en la miniatura</p>
+      <div class="franja-resumen" id="franjaResumen"></div>
+      <button type="button" class="btn-datos" id="btnFranja" onclick="abrirDialogoFranja()">🏷️ Agregar franja</button>
       <p class="seccion-titulo">Descripción</p>
       <textarea class="caja-texto" id="form-desc" rows="3" placeholder="Descripción de la edición..."></textarea>
       <p class="seccion-titulo">Imagen del Catálogo</p>
@@ -706,6 +710,25 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
     <button class="sheet-opcion" id="sheetImportFusionar">🔗 Fusionar (agregar sin perder lo mío)</button>
     <button class="sheet-opcion" id="sheetImportReemplazar">♻️ Reemplazar todo</button>
     <button class="sheet-cancelar" onclick="cerrarSheetImport()">Cancelar</button>
+  </div>
+</div>
+
+<!-- VENTANA DE FRANJA DE LA MINIATURA: nada se aplica hasta tocar «Confirmar» -->
+<div class="dialogo-overlay" id="franjaOverlay" onclick="if(event.target===this)cerrarDialogoFranja()">
+  <div class="dialogo-box">
+    <p class="dialogo-mensaje" style="margin-bottom:10px">Franja en la miniatura</p>
+    <input type="text" class="caja-texto" id="franjaTexto" maxlength="25" placeholder="Texto de la franja (máx. 25 letras)" oninput="actualizarVistaFranja()">
+    <div class="franja-atajos">
+      <button type="button" onclick="franjaAtajo('Sin venta pública','#b8860b')">Sin venta pública</button>
+      <button type="button" onclick="franjaAtajo('Tarjeta retirada','#dc2626')">Tarjeta retirada</button>
+    </div>
+    <div class="franja-colores" id="franjaColores"></div>
+    <div class="franja-vista"><div class="franja-vista-tarjeta"><div class="banner-estado" id="franjaVista"></div></div></div>
+    <div class="dialogo-btns" style="margin-top:14px">
+      <button type="button" class="dialogo-destructivo" id="franjaQuitar" onclick="quitarFranja()">Quitar franja</button>
+      <button type="button" class="dialogo-secundario" onclick="cerrarDialogoFranja()">Cancelar</button>
+      <button type="button" onclick="confirmarFranja()">Confirmar</button>
+    </div>
   </div>
 </div>
 
@@ -1180,6 +1203,68 @@ function esc(v){
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let catalogo=[];
 let tabActual='catalogo',selId=null,editId=null,pendingFileCb=null;
+// ---- Franja de la miniatura (reemplaza las casillas «Sin venta pública» y «Tarjeta retirada») ----
+// Cada tarjeta puede tener una franja con texto libre y un color. Se guarda en franjaTexto y franjaColor.
+// Las tarjetas antiguas siguen mostrando su franja gracias a noComercializada y retirada (ver franjaDe).
+const FRANJA_COLORES=[
+  {nombre:'Dorado',hex:'#b8860b'},{nombre:'Rojo',hex:'#dc2626'},{nombre:'Azul',hex:'#0052cc'},
+  {nombre:'Verde',hex:'#16a34a'},{nombre:'Morado',hex:'#7c3aed'},{nombre:'Naranjo',hex:'#ea580c'},{nombre:'Gris',hex:'#64748b'}
+];
+let franjaForm=null;      // franja de la tarjeta que se está editando: {texto,color} o null
+let franjaBorrador=null;  // lo que se ve en la ventana mientras no se confirma
+function colorTranslucido(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
+function franjaDe(t){
+  if(t.franjaTexto){
+    const ok=/^#[0-9a-f]{6}$/i.test(t.franjaColor||'');
+    return {texto:String(t.franjaTexto),color:ok?t.franjaColor:FRANJA_COLORES[0].hex};
+  }
+  if(t.retirada)return {texto:'Tarjeta Retirada',color:'#dc2626'};
+  if(t.noComercializada)return {texto:'Sin Venta Pública',color:'#b8860b'};
+  return null;
+}
+function actualizarFranjaForm(){
+  const r=document.getElementById('franjaResumen'),b=document.getElementById('btnFranja');
+  if(franjaForm){
+    r.classList.add('activa');
+    r.innerHTML=`<span class="franja-chip" style="background:${colorTranslucido(franjaForm.color,0.88)}">${esc(franjaForm.texto)}</span>`;
+    b.textContent='✏️ Editar franja';
+  }else{
+    r.classList.remove('activa');r.innerHTML='';
+    b.textContent='🏷️ Agregar franja';
+  }
+}
+function pintarColoresFranja(){
+  document.getElementById('franjaColores').innerHTML=FRANJA_COLORES.map(c=>
+    `<button type="button" class="franja-color${c.hex===franjaBorrador.color?' sel':''}" style="background:${c.hex}" aria-label="${c.nombre}" onclick="elegirColorFranja('${c.hex}')"></button>`).join('');
+}
+function actualizarVistaFranja(){
+  franjaBorrador.texto=document.getElementById('franjaTexto').value;
+  const v=document.getElementById('franjaVista');
+  v.textContent=franjaBorrador.texto.trim()||'Vista previa';
+  v.style.background=colorTranslucido(franjaBorrador.color,0.88);
+}
+function elegirColorFranja(hex){franjaBorrador.color=hex;pintarColoresFranja();actualizarVistaFranja();}
+function franjaAtajo(texto,color){
+  document.getElementById('franjaTexto').value=texto;
+  franjaBorrador.color=color;
+  pintarColoresFranja();actualizarVistaFranja();
+}
+function abrirDialogoFranja(){
+  franjaBorrador=franjaForm?{texto:franjaForm.texto,color:franjaForm.color}:{texto:'',color:FRANJA_COLORES[0].hex};
+  document.getElementById('franjaTexto').value=franjaBorrador.texto;
+  document.getElementById('franjaQuitar').style.display=franjaForm?'':'none';
+  pintarColoresFranja();actualizarVistaFranja();
+  document.getElementById('franjaOverlay').classList.add('activa');
+}
+function cerrarDialogoFranja(){document.getElementById('franjaOverlay').classList.remove('activa');}
+async function confirmarFranja(){
+  const texto=document.getElementById('franjaTexto').value.trim();
+  if(!texto){await mostrarAlerta('Escribe un texto para la franja, o toca «Quitar franja» si no quieres ninguna.');return;}
+  franjaForm={texto,color:franjaBorrador.color};
+  actualizarFranjaForm();cerrarDialogoFranja();
+}
+function quitarFranja(){franjaForm=null;actualizarFranjaForm();cerrarDialogoFranja();}
+
 let cropStates={};
 
 function colorTipo(t){
@@ -1321,7 +1406,8 @@ function crearElTarjeta(t,modoRepetidas){
   el.onclick=modoRepetidas?()=>verRepetida(t.id):()=>verDetalle(t.id);
   const icono=modoRepetidas?'':(t.tengo?`<div class="check-icono tengo">✔</div>`:`<div class="check-icono no-tengo">🔒</div>`);
   const badge=modoRepetidas?`<div class="badge-repetida">×${esc(t.repetidas)}</div>`:'';
-  const banner=modoRepetidas?'':(t.retirada?`<div class="banner-estado banner-retirada">Tarjeta Retirada</div>`:(t.noComercializada?`<div class="banner-estado banner-sin-venta">Sin Venta Pública</div>`:''));
+  const fr=modoRepetidas?null:franjaDe(t);
+  const banner=fr?`<div class="banner-estado" style="background:${colorTranslucido(fr.color,0.88)}">${esc(fr.texto)}</div>`:'';
   if(t.imgBase64){
     el.innerHTML=`<img class="bip-thumb" src="${esc(t.imgBase64)}" alt="${esc(t.titulo)}">${icono}${badge}${banner}<div class="logo-bip">bip!</div>`;
   } else {
@@ -1627,7 +1713,7 @@ document.getElementById('btnAgregar').onclick=()=>{
   document.getElementById('form-titulo-nav').textContent='Nueva Tarjeta';
   document.getElementById('form-titulo').value='';
   setFormFecha(new Date().toISOString().split('T')[0]);
-  document.getElementById('form-desc').value='';document.getElementById('form-nro-orden').value='';document.getElementById('form-tipo').value='Evento';document.getElementById('form-no-comercializada').checked=false;document.getElementById('form-retirada').checked=false;
+  document.getElementById('form-desc').value='';document.getElementById('form-nro-orden').value='';document.getElementById('form-tipo').value='Evento';franjaForm=null;actualizarFranjaForm();
   document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';
   document.getElementById('cropOuter').style.display='none';
   document.getElementById('modal-formulario').classList.add('activa');
@@ -1641,8 +1727,7 @@ function activarEdicion(t){
   document.getElementById('form-tipo').value=t.tipo;
   document.getElementById('form-desc').value=t.descripcion||'';
   document.getElementById('form-nro-orden').value=tieneNro(t)?t.nroOrden:'';
-  document.getElementById('form-no-comercializada').checked=!!t.noComercializada;
-  document.getElementById('form-retirada').checked=!!t.retirada;
+  franjaForm=franjaDe(t);actualizarFranjaForm();
   if(t.imgBase64){cropStates[''].originalSrc=t.imgBase64;document.getElementById('uploadArea').textContent='✓ Imagen cargada';setTimeout(()=>initCrop(t.imgBase64,'','cropWrap','cropOuter','zoomSlider'),60);}
   else{document.getElementById('uploadArea').innerHTML='📂 Subir foto desde tu dispositivo';document.getElementById('cropOuter').style.display='none';}
   cerrarModal('modal-detalle');document.getElementById('modal-formulario').classList.add('activa');
@@ -1704,7 +1789,7 @@ async function guardarFormularioTarjeta(){
     catch(err){console.error(err);await mostrarAlerta('❌ No se pudo procesar la imagen, así que no se guardó nada. Vuelve a elegir la foto e inténtalo de nuevo.');return;}
   }
   const ex=editId?catalogo.find(x=>x.id===editId):null;
-  const obj={id:editId||Date.now().toString(),titulo,fecha:fechaForm,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:document.getElementById('form-no-comercializada').checked,retirada:document.getElementById('form-retirada').checked,tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
+  const obj={id:editId||Date.now().toString(),titulo,fecha:fechaForm,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:false,retirada:false,franjaTexto:franjaForm?franjaForm.texto:'',franjaColor:franjaForm?franjaForm.color:'',tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
   if(nroOrden!==null)obj.nroOrden=nroOrden;
   if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
   for(const m of movimientos)m.t.nroOrden+=m.delta;
