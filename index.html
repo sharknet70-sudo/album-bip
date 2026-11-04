@@ -1789,8 +1789,8 @@ async function guardarFormularioTarjeta(){
     catch(err){console.error(err);await mostrarAlerta('❌ No se pudo procesar la imagen, así que no se guardó nada. Vuelve a elegir la foto e inténtalo de nuevo.');return;}
   }
   const ex=editId?catalogo.find(x=>x.id===editId):null;
-  const obj={id:editId||Date.now().toString(),titulo,fecha:fechaForm,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:false,retirada:false,franjaTexto:franjaForm?franjaForm.texto:'',franjaColor:franjaForm?franjaForm.color:'',tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
-  if(nroOrden!==null)obj.nroOrden=nroOrden;
+  const obj={...(ex||{}),id:editId||Date.now().toString(),titulo,fecha:fechaForm,tipo:document.getElementById('form-tipo').value,descripcion:document.getElementById('form-desc').value,noComercializada:false,retirada:false,franjaTexto:franjaForm?franjaForm.texto:'',franjaColor:franjaForm?franjaForm.color:'',tengo:ex?ex.tengo:false,numSerie:ex?ex.numSerie:'',repetidas:ex?(ex.repetidas||0):0,imgBase64:fi};
+  if(nroOrden!==null)obj.nroOrden=nroOrden;else delete obj.nroOrden;
   if(editId)catalogo=catalogo.map(x=>x.id===editId?obj:x);else catalogo.push(obj);
   for(const m of movimientos)m.t.nroOrden+=m.delta;
   if(!await guardarTarjetas([obj.id,...movimientos.map(m=>m.t.id)]))return;
