@@ -493,6 +493,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
         <option value="Evento">Eventos</option>
         <option value="Conmemoracion">Conmemoraciones</option>
         <option value="CampanaSocial">Campañas Sociales</option>
+        <option value="Organizacion">Organizaciones</option>
       </select>
     </div>
   </div>
@@ -554,6 +555,7 @@ body{background:var(--bg-app);display:flex;justify-content:center;align-items:fl
         <option value="Evento">Evento</option>
         <option value="Conmemoracion">Conmemoración</option>
         <option value="CampanaSocial">Campaña Social</option>
+        <option value="Organizacion">Organización</option>
       </select>
       <p class="seccion-titulo">Franja en la miniatura</p>
       <div class="franja-resumen" id="franjaResumen"></div>
@@ -1268,11 +1270,11 @@ function quitarFranja(){franjaForm=null;actualizarFranjaForm();cerrarDialogoFran
 let cropStates={};
 
 function colorTipo(t){
-  const c={Marca:'#6366f1',Pelicula:'#db2777',Personaje:'#a855f7',Evento:'#0052cc',Conmemoracion:'#0891b2',CampanaSocial:'#16a34a'};
+  const c={Marca:'#6366f1',Pelicula:'#db2777',Personaje:'#a855f7',Evento:'#0052cc',Conmemoracion:'#0891b2',CampanaSocial:'#16a34a',Organizacion:'#ea580c'};
   return c[t]||'#64748b';
 }
 function labelTipo(t){
-  const l={Marca:'Marca',Pelicula:'Película/Serie',Personaje:'Personaje',Evento:'Evento',Conmemoracion:'Conmemoración',CampanaSocial:'Campaña Social'};
+  const l={Marca:'Marca',Pelicula:'Película/Serie',Personaje:'Personaje',Evento:'Evento',Conmemoracion:'Conmemoración',CampanaSocial:'Campaña Social',Organizacion:'Organización'};
   return l[t]||t;
 }
 const MESES_FECHA=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -2344,8 +2346,8 @@ function abrirEstadisticas(){
   const total=catalogo.length;
   const obt=catalogo.filter(t=>t.tengo).length;
   const pct=total>0?Math.round(obt/total*100):0;
-  const tipos=['Marca','Pelicula','Personaje','Evento','Conmemoracion','CampanaSocial'];
-  const colores={Marca:'#6366f1',Pelicula:'#db2777',Personaje:'#a855f7',Evento:'#0052cc',Conmemoracion:'#0891b2',CampanaSocial:'#16a34a'};
+  const tipos=['Marca','Pelicula','Personaje','Evento','Conmemoracion','CampanaSocial','Organizacion'];
+  const colores={Marca:'#6366f1',Pelicula:'#db2777',Personaje:'#a855f7',Evento:'#0052cc',Conmemoracion:'#0891b2',CampanaSocial:'#16a34a',Organizacion:'#ea580c'};
   // tarjeta más reciente conseguida
   const conseguidas=catalogo.filter(t=>t.tengo&&t.fecha).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   const reciente=conseguidas.length?conseguidas[0].titulo:'—';
